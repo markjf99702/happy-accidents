@@ -4,17 +4,18 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>Happy Accidents</title>
-<meta name="description" content="Flick paint at a canvas. Every splat becomes part of a landscape.">
+<meta name="description" content="Flick, tap or pour paint at a canvas. A gentle painter turns every splat into part of a landscape, in the splat's own shape, and paint that lands on something already there changes it.">
 <meta property="og:title" content="Happy Accidents">
-<meta property="og:description" content="Flick paint at a canvas. A gentle painter turns every splat into part of the landscape.">
+<meta property="og:description" content="Flick paint at a canvas. Every splat becomes part of the painting.">
 <meta property="og:image" content="https://junkdrawer.works/happy-accidents/og.png">
 <meta property="og:url" content="https://junkdrawer.works/happy-accidents/">
 <meta name="twitter:card" content="summary_large_image">
 <meta name="theme-color" content="#15110e">
-<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Cpath fill='%2315418a' d='M33 6c6 0 5 9 11 10s12-4 13 3-8 8-6 14 9 9 5 14-10-1-14 4-2 12-9 12-5-9-11-10-12 5-15-2 7-9 5-15S3 28 8 23s11 2 14-4 4-13 11-13z'/%3E%3Ccircle cx='26' cy='24' r='5' fill='%23fff' opacity='.55'/%3E%3C/svg%3E">
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Caprasimo&family=Figtree:ital,wght@0,400;0,500;0,600;0,700;1,400;1,500&family=Mrs+Saint+Delafield&display=swap">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="icon.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="icon-180.png">
+<link rel="preload" href="fonts/caprasimo.woff2" as="font" type="font/woff2" crossorigin>
+<link rel="preload" href="fonts/figtree.woff2" as="font" type="font/woff2" crossorigin>
 <link rel="stylesheet" href="styles.css">
 </head>
 <body>
@@ -115,6 +116,7 @@
   </div>
 </div>
 
+<noscript><p class="noscript">Happy Accidents needs JavaScript to paint.</p></noscript>
 <script type="module" src="src/main.js"></script>
 </body>
 </html>

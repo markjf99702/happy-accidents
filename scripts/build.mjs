@@ -16,8 +16,16 @@ const result = await build({
   write: false,
 });
 const js = result.outputFiles[0].text.replace(/<\/script/gi, '<\\/script');
-const css = await read('styles.css');
+
+// A single file can't point at other files, so the fonts and the icon go in as data: URIs,
+// and the links that only make sense for the hosted site (manifest, home-screen icon, preloads) come out.
+const dataUri = async (path, type) => `data:${type};base64,${(await readFile(new URL(path, root))).toString('base64')}`;
+let css = await read('styles.css');
+for (const [, file] of css.matchAll(/url\((fonts\/[^)]+\.woff2)\)/g)) css = css.replace(`url(${file})`, `url(${await dataUri(file, 'font/woff2')})`);
+const icon = await dataUri('icon.svg', 'image/svg+xml');
 const html = (await read('index.html'))
+  .replace(/<link rel="(manifest|apple-touch-icon|preload)"[^>]*>\n/g, '')
+  .replace('href="icon.svg"', () => `href="${icon}"`)
   .replace('<link rel="stylesheet" href="styles.css">', () => `<style>\n${css}</style>`)
   .replace('<script type="module" src="src/main.js"></script>', () => `<script>\n${js}</script>`);
 

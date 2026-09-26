@@ -2,13 +2,15 @@
   "name": "happy-accidents",
   "version": "1.0.0",
   "private": true,
-  "description": "Flick paint at a canvas. Every splat becomes part of a landscape.",
+  "description": "Flick paint at a canvas. Every splat becomes part of the painting.",
   "type": "module",
   "scripts": {
     "start": "npx --yes http-server -c-1 -p 8080 .",
+    "test": "node --test test/unit.test.mjs && node test/e2e.mjs",
     "build": "node scripts/build.mjs"
   },
   "devDependencies": {
-    "esbuild": "^0.28.2"
+    "esbuild": "^0.28.2",
+    "upng-js": "^2.1.0"
   }
 }

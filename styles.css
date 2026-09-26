@@ -1,5 +1,35 @@
 /* Happy Accidents: a dark studio set with one lit canvas on an easel. */
 
+/* Fonts are served from here (SIL Open Font License), so nothing loads from elsewhere. */
+@font-face {
+  font-family: 'Caprasimo';
+  src: url(fonts/caprasimo.woff2) format('woff2');
+  font-weight: 400;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'Figtree';
+  src: url(fonts/figtree.woff2) format('woff2');
+  font-weight: 400 700;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'Figtree';
+  src: url(fonts/figtree-italic.woff2) format('woff2');
+  font-weight: 400 700;
+  font-style: italic;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'Mrs Saint Delafield';
+  src: url(fonts/mrs-saint-delafield.woff2) format('woff2');
+  font-weight: 400;
+  font-display: swap;
+}
+
 :root {
   color-scheme: dark;
   --set: #15110e;
@@ -47,6 +77,13 @@ body {
 
 [hidden] {
   display: none !important;
+}
+
+.noscript {
+  margin: 0;
+  padding: 24px 16px;
+  text-align: center;
+  color: var(--ink);
 }
 
 button {

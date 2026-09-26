@@ -549,6 +549,11 @@ window.addEventListener('keydown', (e) => {
 
 // ——— start ———
 
+// Keep a copy for painting offline. Not inside the claude.ai viewer or a file opened from disk, where it isn't allowed.
+if ('serviceWorker' in navigator && !inFrame && location.protocol.startsWith('http')) {
+  window.addEventListener('load', () => navigator.serviceWorker.register('sw.js').catch(() => {}));
+}
+
 window.addEventListener('pointerdown', sound.wake, true);
 window.addEventListener('keydown', sound.wake, true);
 
@@ -557,5 +562,6 @@ updateCount();
 studio.newCanvas();
 runDemo();
 
-// Exposed for tinkering from the console.
+// Exposed for tinkering from the console, and for test/e2e.mjs and tools/screenshots.mjs.
 window.happyAccidents = studio;
+studio.skipIntro = userActed;
