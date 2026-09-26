@@ -102,6 +102,7 @@ Everything on the canvas is procedurally painted.
 - `src/words.js`: what the painter says, which brushes and paints they name, and titles
   like *Cabin at Otter Cove* or *October Pines*.
 - `src/sound.js`: optional, synthesized splat and brush sounds (off by default).
+- `og.png`: the picture shown when a link is shared in a message.
 
 The window exposes the studio as `window.happyAccidents` if you want to poke at it from the console:
 
