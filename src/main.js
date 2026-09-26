@@ -41,6 +41,23 @@ const inFrame = (() => {
   }
 })();
 
+// When the page runs inside the claude.ai artifact viewer, saving a file goes through the
+// viewer's downloads capability; elsewhere a plain browser download does the job.
+let downloads = null;
+window.claude?.use?.('downloads').then(
+  (d) => {
+    downloads = d;
+  },
+  () => {},
+);
+
+function dataUrlBytes(url) {
+  const bin = atob(url.slice(url.indexOf(',') + 1));
+  const bytes = new Uint8Array(bin.length);
+  for (let i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i);
+  return bytes;
+}
+
 // ——— narration ———
 
 let lineTimer = 0;
@@ -385,13 +402,35 @@ function showPlacard(record, src) {
   $('plNote').textContent = madeFrom(record.accidents, record.seconds);
   $('plFeatures').textContent = record.features;
   $('plCredit').textContent = `Collection of the artist · Canvas No. ${record.number} · ${record.scheme}`;
-  const link = $('downloadLink');
-  link.href = src || record.img;
-  link.download = `${slug(record.title)}.jpg`;
-  link.hidden = inFrame;
-  $('saveHint').hidden = !inFrame;
+  const canSave = !inFrame || !!downloads;
+  const saveBtn = $('downloadBtn');
+  saveBtn.hidden = !canSave;
+  saveBtn.textContent = 'Download image';
+  saveBtn.onclick = () => saveImage(src || record.img, `${slug(record.title)}.jpg`);
+  $('saveHint').hidden = canSave;
   $('gallery').hidden = true;
   openOverlay($('placard'), $('anotherBtn'));
+}
+
+async function saveImage(src, filename) {
+  const btn = $('downloadBtn');
+  if (downloads) {
+    try {
+      await downloads.save({ filename, data: dataUrlBytes(src) });
+      btn.textContent = 'Saved';
+    } catch (err) {
+      if (err?.code === 'declined' || err?.code === 'rate_limited') return;
+      btn.hidden = true;
+      $('saveHint').hidden = false;
+    }
+    return;
+  }
+  const a = document.createElement('a');
+  a.href = src;
+  a.download = filename;
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
 }
 
 $('anotherBtn').addEventListener('click', () => {

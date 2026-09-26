@@ -49,8 +49,7 @@ body {
   display: none !important;
 }
 
-button,
-.button {
+button {
   font: 600 14px/1 var(--body);
   color: var(--ink);
   background: transparent;
@@ -58,7 +57,6 @@ button,
   border-radius: 6px;
   padding: 11px 14px;
   cursor: pointer;
-  text-decoration: none;
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -67,19 +65,16 @@ button,
   transition: background-color 0.15s, border-color 0.15s, transform 0.1s;
 }
 
-button:hover,
-.button:hover {
+button:hover {
   background: rgba(241, 233, 220, 0.07);
   border-color: rgba(241, 233, 220, 0.3);
 }
 
-button:active,
-.button:active {
+button:active {
   transform: translateY(1px);
 }
 
 button:focus-visible,
-.button:focus-visible,
 canvas:focus-visible,
 input:focus-visible {
   outline: 2px solid var(--cad);
@@ -97,14 +92,12 @@ button.primary:hover {
   border-color: var(--red-hi);
 }
 
-button.quiet,
-.button.quiet {
+button.quiet {
   border-color: transparent;
   color: var(--ink-soft);
 }
 
-button.quiet:hover,
-.button.quiet:hover {
+button.quiet:hover {
   color: var(--ink);
   border-color: var(--line);
 }
