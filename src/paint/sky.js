@@ -3,7 +3,7 @@
 import { TAU, rand, randi, chance, clamp, gauss } from '../util.js';
 import { rgba, mix, jitter, darken, lighten, ramp, hex } from '../color.js';
 import { bristle, linePts, soft, scrub } from '../brush.js';
-import { place, placeDrops, clumps } from '../shape.js';
+import { place, placeDrops, clumps, span } from '../shape.js';
 
 export function sky(S) {
   const { W, hy, scheme } = S;
@@ -92,11 +92,13 @@ export function sun(S, p) {
   const x = p.x;
   const y = Math.min(p.y, hy - r * 1.6);
   const g = r * 5.5;
+  const disc = p.body ?? scheme.sun;
+  const halo = p.glow ?? scheme.sunGlow;
   const ops = [];
-  ops.push((ctx) => soft(ctx, x, y, g, scheme.sunGlow, 0.42));
-  ops.push((ctx) => soft(ctx, x, y, r * 2.4, lighten(scheme.sunGlow, 0.3), 0.45));
+  ops.push((ctx) => soft(ctx, x, y, g, halo, 0.42));
+  ops.push((ctx) => soft(ctx, x, y, r * 2.4, lighten(halo, 0.3), 0.45));
   ops.push((ctx) => {
-    ctx.fillStyle = rgba(scheme.sun, 0.96);
+    ctx.fillStyle = rgba(disc, 0.96);
     ctx.beginPath();
     ctx.arc(x, y, r, 0, TAU);
     ctx.fill();
@@ -106,14 +108,14 @@ export function sun(S, p) {
       for (let j = 0; j < 5; j++) {
         const a = rand(TAU);
         const d = rand(r * 0.75);
-        scrub(ctx, x + Math.cos(a) * d, y + Math.sin(a) * d, rand(r * 0.2, r * 0.4), lighten(scheme.sun, 0.3), 0.3);
+        scrub(ctx, x + Math.cos(a) * d, y + Math.sin(a) * d, rand(r * 0.2, r * 0.4), lighten(disc, 0.3), 0.3);
       }
     });
   }
   ops.push((ctx) => {
     for (let i = 0; i < 28; i++) {
       const a = (i / 28) * TAU;
-      scrub(ctx, x + Math.cos(a) * r * 0.96, y + Math.sin(a) * r * 0.96, r * 0.14, scheme.sun, 0.3);
+      scrub(ctx, x + Math.cos(a) * r * 0.96, y + Math.sin(a) * r * 0.96, r * 0.14, disc, 0.3);
     }
   });
   if (moon) {
@@ -122,11 +124,11 @@ export function sun(S, p) {
       ctx.beginPath();
       ctx.arc(x, y, r, 0, TAU);
       ctx.clip();
-      for (let i = 0; i < 7; i++) soft(ctx, x + rand(-r * 0.55, r * 0.55), y + rand(-r * 0.55, r * 0.55), rand(r * 0.12, r * 0.3), darken(scheme.sun, 0.3), 0.22);
+      for (let i = 0; i < 7; i++) soft(ctx, x + rand(-r * 0.55, r * 0.55), y + rand(-r * 0.55, r * 0.55), rand(r * 0.12, r * 0.3), darken(disc, 0.3), 0.22);
       const sx = x - S.lightDir * r * 0.9;
       const gr = ctx.createRadialGradient(sx, y, r * 0.4, sx, y, r * 1.6);
-      gr.addColorStop(0, rgba(darken(scheme.sun, 0.45), 0));
-      gr.addColorStop(1, rgba(darken(scheme.sun, 0.45), 0.35));
+      gr.addColorStop(0, rgba(darken(disc, 0.45), 0));
+      gr.addColorStop(1, rgba(darken(disc, 0.45), 0.35));
       ctx.fillStyle = gr;
       ctx.fillRect(x - r, y - r, r * 2, r * 2);
       ctx.restore();
@@ -139,14 +141,14 @@ export function sun(S, p) {
     bbox: { x: x - g, y: y - g, w: g * 2, h: g * 2 },
     ops,
     dur: 1300,
-    meta: { x, y, r },
+    meta: { x, y, r, color: disc },
   };
 }
 
 export function cloud(S, p) {
   const { hy, scheme } = S;
-  const light = mix(scheme.cloud.light, p.tint, 0.1);
-  const shadow = mix(scheme.cloud.shadow, p.tint, 0.18);
+  const light = p.light ?? mix(scheme.cloud.light, p.tint, 0.1);
+  const shadow = p.shadow ?? mix(scheme.cloud.shadow, p.tint, 0.18);
   const w = clamp(p.R * rand(4.5, 7.5), 110, 560);
   const x = p.x;
   const y = clamp(p.y, 30, hy - 30);
@@ -214,7 +216,14 @@ export function cloud(S, p) {
     h = Math.max(24, baseY - top);
     const flat = poly.map(([px, py]) => [px, Math.min(py, baseY)]);
     puffs = clumps(flat, x, (top + baseY) / 2, h * 0.5, 4).map((pf) => ({ ...pf, y: Math.min(pf.y, baseY - pf.r * 0.4) }));
-    for (let k = 0; k < 4; k++) puffs.push({ x: left + ((right - left) * (k + 0.5)) / 4, y: (top + baseY) / 2 + h * 0.1, r: h * 0.38 });
+    // Fill the middle as well: the puffs along the outline don't reach the center of a wide cloud.
+    for (const t of [0.45, 0.75]) {
+      const ry = top + (baseY - top) * t;
+      const s = span(flat, ry);
+      if (!s) continue;
+      const n = clamp(Math.round((s[1] - s[0]) / Math.max(h * 0.5, (right - left) / 7)), 1, 7);
+      for (let k = 0; k < n; k++) puffs.push({ x: s[0] + ((s[1] - s[0]) * (k + 0.5)) / n, y: ry, r: h * 0.4 });
+    }
     // Droplets that flew off become little cloudlets drifting alongside.
     const bits = placeDrops(p.shape, x, y, f * 0.55, fy * 0.55)
       .filter((d) => d.y < hy - 20)
@@ -330,7 +339,7 @@ export function cloud(S, p) {
 }
 
 export function birds(S, p) {
-  const col = S.scheme.bird;
+  const col = p.color ?? S.scheme.bird;
   const scale = clamp(p.R / 12, 0.7, 1.4) * (0.6 + 0.6 * (1 - p.y / S.hy));
   // Every droplet that flew off the brush becomes a bird, if there were enough of them.
   const drops = [];

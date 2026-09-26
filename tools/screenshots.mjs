@@ -61,13 +61,15 @@ async function paint(page) {
     { x: 1080, y: 250, R: 38, paint: 'phthalo-blue', hint: 'tree', vx: 0, vy: 1.4 },
     { x: 660, y: 110, R: 30, paint: 'van-dyke-brown', hint: 'tree' },
     { x: 760, y: 70, R: 12, paint: 'van-dyke-brown', hint: 'birds' },
+    { x: 560, y: 120, R: 22, paint: 'titanium-white', hint: 'water' },
+    { x: 760, y: 250, R: 18, paint: 'bright-red', hint: 'water' },
   ];
   for (const s of splats) {
     await page.evaluate(async (s) => {
       const S = window.happyAccidents;
       const { PIGMENTS } = await import('./src/schemes.js');
       // y is measured from the horizon when it's below 0 or when the splat is meant for the lake or land.
-      const below = ['bank', 'tree'].includes(s.hint);
+      const below = ['bank', 'tree', 'water'].includes(s.hint);
       const y = s.y < 0 ? S.hy + s.y : below ? S.hy + s.y : s.y;
       let { x } = s;
       if (s.hint === 'tree' && !S.isLand(x, y)) {
@@ -79,6 +81,8 @@ async function paint(page) {
     await page.waitForTimeout(150);
     await settle(page);
   }
+  // Let the last splat finish fading out.
+  await page.waitForTimeout(1500);
 }
 
 // Phone: a painting on the easel, a splat still wet, and a signed painting on its label.

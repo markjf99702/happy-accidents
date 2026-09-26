@@ -103,6 +103,60 @@ await page.waitForTimeout(200);
 await settle();
 assert.equal(await S(() => window.happyAccidents.counts.snowfall), 1, 'white paint on a mountain made fresh snow');
 
+// The paint's color decides what a splat becomes. Each check starts on a clean canvas and reports what got painted.
+// where: { sky: 0..1 } is from the top of the canvas down to the horizon; { lake: 0..1 } from the horizon down;
+// 'land' is a spot on a bank of Sap Green land laid down first.
+async function paintWith(id, where, R, hint) {
+  await S(() => window.happyAccidents.newCanvas('golden-hour'));
+  await settle();
+  if (where === 'land') {
+    await S(async () => {
+      const { PIGMENTS } = await import('./src/schemes.js');
+      const st = window.happyAccidents;
+      st.addSplat({ x: st.W * 0.2, y: st.hy + (st.H - st.hy) * 0.6, R: 40, pigment: PIGMENTS.find((p) => p.id === 'sap-green'), hint: 'bank', delay: 50 });
+    });
+    await page.waitForTimeout(200);
+    await settle();
+  }
+  const before = await S(() => ({ ...window.happyAccidents.counts }));
+  await S(async ({ id, where, R, hint }) => {
+    const { PIGMENTS } = await import('./src/schemes.js');
+    const st = window.happyAccidents;
+    let x = st.W * (where.x ?? 0.5);
+    let y = where.sky !== undefined ? where.sky * st.hy : st.hy + (where.lake ?? 0) * (st.H - st.hy);
+    if (where === 'land') {
+      const spots = st.elements.find((e) => e.kind === 'bank').meta.spots;
+      [x, y] = spots[Math.floor(spots.length / 2)];
+    }
+    st.addSplat({ x, y, R, pigment: PIGMENTS.find((p) => p.id === id), hint, delay: 50 });
+  }, { id, where, R, hint });
+  await page.waitForTimeout(200);
+  await settle();
+  const after = await S(() => ({ ...window.happyAccidents.counts }));
+  return Object.keys(after).filter((k) => (after[k] || 0) > (before[k] || 0));
+}
+const lastCloudLum = () => S(() => {
+  const c = window.happyAccidents.elements.filter((e) => e.kind === 'cloud').pop().meta.light;
+  return (0.2126 * c[0] + 0.7152 * c[1] + 0.0722 * c[2]) / 255;
+});
+
+assert.ok((await paintWith('titanium-white', { lake: 0.4 }, 24)).includes('sailboat'), 'white out on the lake is a sailboat');
+assert.ok((await paintWith('bright-red', { lake: 0.45 }, 20)).includes('canoe'), 'red on the lake is a canoe');
+assert.ok((await paintWith('yellow-ochre', { x: 0.12, lake: 0.6 }, 36)).includes('bank'), 'ochre by the shore is land');
+let kinds = await paintWith('van-dyke-brown', { sky: 0.25 }, 34);
+assert.ok(kinds.includes('cloud') && (await lastCloudLum()) < 0.5, `brown high in the sky is a dark cloud, not a white one (${kinds})`);
+kinds = await paintWith('titanium-white', { sky: 0.3, x: 0.3 }, 30);
+assert.ok(kinds.includes('sun') || (kinds.includes('cloud') && (await lastCloudLum()) > 0.8), `white high in the sky is a white cloud or the sun (${kinds})`);
+assert.deepEqual(await paintWith('van-dyke-brown', { sky: 0.3 }, 12), ['birds'], 'a small brown fleck up high is birds');
+kinds = await paintWith('phthalo-blue', { sky: 0.8 }, 40);
+assert.ok(kinds.length && kinds.every((k) => ['mountain', 'cloud', 'birds'].includes(k)), `blue low in the sky is a mountain, a cloud or birds (${kinds})`);
+kinds = await paintWith('sap-green', 'land', 30, 'tree');
+assert.ok(['evergreen', 'deciduous', 'bush'].some((k) => kinds.includes(k)), `green on land is a tree (${kinds})`);
+kinds = await paintWith('titanium-white', 'land', 30, 'tree');
+assert.ok(kinds.includes('treeSnow') || kinds.includes('deciduous'), `white on land is a snowy tree or a birch (${kinds})`);
+kinds = await paintWith('phthalo-blue', 'land', 30, 'tree');
+assert.ok(kinds.includes('evergreen'), `blue on land is a blue spruce (${kinds})`);
+
 // Fits a phone: nothing scrolls sideways.
 assert.equal(await S(() => document.documentElement.scrollWidth <= innerWidth), true, 'the page scrolls sideways on a phone');
 

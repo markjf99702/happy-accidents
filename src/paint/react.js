@@ -26,7 +26,7 @@ function density(cl, lw, k, lo, hi) {
 export function treeSnow(S, t, p) {
   const m = t.meta;
   const L = S.lightDir;
-  const snow = mix(WHITE, p.tint, 0.04);
+  const snow = mix(S.scheme.night ? S.scheme.mtn.snow : WHITE, p.tint, 0.04);
   const shaded = mix(snow, S.scheme.mtn.shadow, 0.3);
   const ops = [];
   if (m.tiers) {

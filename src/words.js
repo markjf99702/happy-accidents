@@ -70,6 +70,32 @@ export const LINES = {
   sun: ['That’s a sun if I ever saw one.', 'Let’s give this painting some light.'],
   moon: ['The moon’s up. Everybody be quiet now.'],
   aurora: ['The sky’s doing that shimmery thing tonight.'],
+  // What a paint turned into, when the color made the call.
+  wisp: ['Just a wisp of cloud. Barely there.', 'A little streak of cloud, thin as you like.'],
+  goldenCloud: ['Yellow up there, so the cloud’s lit from underneath.', 'A cloud with the sun on it. That’s where the yellow went.'],
+  sunsetCloud: ['Red in the sky makes a sunset cloud.', 'A pink cloud. Somebody’s having a nice evening.'],
+  coolCloud: ['A cool blue cloud. Weather might be on the way.', 'Blue in the sky makes a cool, shady cloud.'],
+  stormCloud: ['Dark paint up high? That’s a storm cloud.', 'That one’s heavy. Dark clouds carry weather.'],
+  snowyMountain: ['All that white is snow. There was a mountain under it.', 'White, low in the sky. That’s a snowy peak.'],
+  blueMountain: ['Blue mountains, way off. Distance turns everything blue.', 'A blue ridge. Far away and quiet.'],
+  brownMountain: ['Brown, low in the sky. That’s rock. A big old mountain.', 'Van Dyke Brown makes good solid rock.'],
+  redMountain: ['Red rock. It glows like that out west.', 'A red mountain. The evening sun lives in there.'],
+  goldMountain: ['Ochre makes a sunny mountain. Sandstone, maybe.'],
+  greenMountain: ['A green mountain, trees all the way up.', 'Green that high up is a forested hill.'],
+  tallTree: ['Green way up there? That’s the top of a tall tree.', 'A tall one. He grew right up to where the paint landed.'],
+  snowyTreeline: ['A row of snowy trees, way off.'],
+  blueSpruce: ['Blue paint on the ground makes a blue spruce.', 'A little blue spruce. They’re real, you know.'],
+  birch: ['White on the ground? A birch. White bark, dark marks.', 'A birch tree. The white paint went into the bark.'],
+  snowyTree: ['White on the land. A tree that’s been out in the snow.', 'That white’s snow. There’s a tree under it.'],
+  goldenTree: ['Yellow on the ground turns into a golden tree.', 'A golden fella. The yellow went into the leaves.'],
+  redTree: ['A red one. Maples do that.', 'Red paint on the land makes a red tree.'],
+  bareTree: ['Brown makes a bare tree. Just branches. He’s resting.', 'No leaves on this one. Brown paint, bare branches.'],
+  redCabin: ['Red on the land? A little red cabin.', 'Somebody painted their cabin red. Good for them.'],
+  whiteCabin: ['A little white house. Somebody keeps it nice.'],
+  sailboat: ['White on the water is a sail. Somebody’s out on the lake.', 'A little sailboat. The white paint caught the wind.'],
+  canoe: ['Red on the water. That’s a canoe.', 'A red canoe, just drifting. Nobody’s in a hurry.'],
+  glints: ['Light on the water. That’s where the paint went.', 'A little sparkle where the light hits the lake.'],
+  blueRipples: ['Blue on the water just moves the water around.', 'A few ripples, cool and blue.'],
   signature: ['Now sign it. That makes it yours.'],
   invite: ['Your turn. Tap, flick, or press and hold. Try hitting something that’s already there, too.'],
   done: ['That might be done. Sign it whenever you’re ready.'],
@@ -98,6 +124,9 @@ const TOOLS = {
   moon: ['1-inch brush', ['Titanium White', 'Prussian Blue']],
   aurora: ['2-inch brush', ['Phthalo Green', 'Titanium White']],
   signature: ['Liner brush', ['Bright Red']],
+  sailboat: ['Liner brush', ['Titanium White', 'Van Dyke Brown']],
+  canoe: ['Palette knife', ['Bright Red', 'Van Dyke Brown']],
+  glints: ['Liner brush', ['Cadmium Yellow', 'Titanium White']],
   island: ['2-inch brush', ['Van Dyke Brown', 'Sap Green', 'Yellow Ochre']],
   treeSnow: ['Fan brush', ['Titanium White']],
   treeGlow: ['Fan brush', ['Cadmium Yellow', 'Titanium White']],
@@ -151,6 +180,8 @@ function subjects(counts) {
   if (counts.rock) s.push(['Stone', 'Stones']);
   if (counts.island) s.push(['Island', 'Islands']);
   if (counts.waterfall) s.push(['Falls', 'Falls']);
+  if (counts.sailboat) s.push(['Sail', 'Sails']);
+  if (counts.canoe) s.push(['Canoe', 'Canoes']);
   if (counts.moon || counts.stars) s.push(['Moon', 'Moons']);
   if (!s.length) s.push(['Water', 'Waters'], ['Sky', 'Skies'], ['Shore', 'Shores']);
   return s;
@@ -187,6 +218,8 @@ const FEATURE_NAMES = [
   ['flowers', 'some flowers', 'patches of flowers'],
   ['bank', 'a bit of shore', 'stretches of shore'],
   ['island', 'an island', 'islands'],
+  ['sailboat', 'a sailboat', 'sailboats'],
+  ['canoe', 'a canoe', 'canoes'],
   ['waterfall', 'a waterfall', 'waterfalls'],
   ['rain', 'a passing rainstorm', 'passing rainstorms'],
   ['treeline', 'a distant forest', 'distant forests'],

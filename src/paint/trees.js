@@ -33,9 +33,10 @@ export function evergreen(S, p) {
   const { scheme } = S;
   const { x, baseY, h } = p;
   const hz = p.haze ?? 0;
-  const dark = mix(mix(scheme.tree.dark, p.tint, 0.08), S.haze, hz);
-  const mid = mix(scheme.tree.mid, S.haze, hz);
-  const light = mix(mix(scheme.tree.light, p.tint, 0.1), S.haze, hz * 0.8);
+  const ta = p.tintAmt ?? 0.08;
+  const dark = mix(mix(scheme.tree.dark, p.tint, ta), S.haze, hz);
+  const mid = mix(mix(scheme.tree.mid, p.tint, ta * 0.8), S.haze, hz);
+  const light = mix(mix(scheme.tree.light, p.tint, ta * 0.6 + 0.02), S.haze, hz * 0.8);
   const L = S.lightDir;
   const top = baseY - h;
   const lw = clamp(h / 240, 0.7, 2.2);
@@ -135,10 +136,12 @@ export function deciduous(S, p) {
   const { x, baseY, h } = p;
   const hz = p.haze ?? 0;
   const L = S.lightDir;
-  const trunkC = mix(mix([62, 44, 30], scheme.ground.dark, 0.4), S.haze, hz);
-  const leaf = scheme.leaf.map((c) => mix(c, S.haze, hz));
-  leaf[3] = mix(leaf[3], p.tint, 0.35);
-  if (lum(p.tint) > 0.3) leaf[2] = mix(leaf[2], p.tint, 0.2);
+  const trunkC = mix(p.birch ? [226, 222, 212] : mix([62, 44, 30], scheme.ground.dark, 0.4), S.haze, hz);
+  const leaf = (p.leaf || scheme.leaf).map((c) => mix(c, S.haze, hz));
+  if (!p.leaf) {
+    leaf[3] = mix(leaf[3], p.tint, 0.35);
+    if (lum(p.tint) > 0.3) leaf[2] = mix(leaf[2], p.tint, 0.2);
+  }
 
   const segs = [];
   const trunkTop = [x + rand(-0.05, 0.05) * h, baseY - h * rand(0.28, 0.38)];
@@ -204,7 +207,14 @@ export function deciduous(S, p) {
       }
     });
   }
-  ops.push(...foliage(S, clusters, leaf, lw));
+  if (p.bare) {
+    // No leaves: twigs off the ends of the limbs, and only a few dry leaves hanging on.
+    ops.push(...twigs(segs, trunkC, h));
+    for (const cl of clusters) ops.push((ctx) => leafPass(ctx, cl, leaf[1], Math.round(((cl.r * cl.r) / (lw * lw)) * (p.sparse ?? 0.04)), lw, 0.85));
+  } else {
+    ops.push(...foliage(S, clusters, leaf, lw));
+  }
+  if (p.birch) ops.push(...birchMarks(segs[0], h));
   ops.push((ctx) => {
     const s = segs[0];
     bristle(ctx, linePts(s.a[0] + L * s.w * 0.3, s.a[1] - 2, s.b[0] + L * s.w * 0.25, s.b[1] + h * 0.05, 10), {
@@ -237,14 +247,60 @@ export function deciduous(S, p) {
   };
 }
 
+// Thin twigs forking off the ends of a bare tree's limbs.
+function twigs(segs, color, h) {
+  const ops = [];
+  const ends = segs.slice(1);
+  for (let i = 0; i < ends.length; i += 4) {
+    const chunk = ends.slice(i, i + 4);
+    ops.push((ctx) => {
+      ctx.strokeStyle = rgba(color, 0.9);
+      ctx.lineCap = 'round';
+      for (const s of chunk) {
+        const ang = Math.atan2(s.b[1] - s.a[1], s.b[0] - s.a[0]);
+        for (let k = 0; k < 4; k++) {
+          const a = ang + rand(-0.8, 0.8);
+          const len = h * rand(0.05, 0.12);
+          const mx = s.b[0] + Math.cos(a) * len * 0.5;
+          const my = s.b[1] + Math.sin(a) * len * 0.5;
+          ctx.lineWidth = Math.max(0.6, s.w1 * 0.5);
+          ctx.beginPath();
+          ctx.moveTo(s.b[0], s.b[1]);
+          ctx.quadraticCurveTo(mx + rand(-3, 3), my + rand(-3, 3), s.b[0] + Math.cos(a) * len, s.b[1] + Math.sin(a) * len);
+          ctx.stroke();
+        }
+      }
+    });
+  }
+  return ops;
+}
+
+// The dark bands across birch bark.
+function birchMarks(trunk, h) {
+  return [
+    (ctx) => {
+      const [x0, y0] = trunk.a;
+      const [x1, y1] = trunk.b;
+      for (let i = 0; i < Math.round(h / 14); i++) {
+        const t = Math.random();
+        const x = x0 + (x1 - x0) * t;
+        const y = y0 + (y1 - y0) * t;
+        const w = trunk.w * (1 - t * 0.4);
+        ctx.fillStyle = rgba([40, 34, 30], rand(0.6, 0.9));
+        ctx.fillRect(x - w / 2 + rand(0, w * 0.3), y, w * rand(0.3, 0.7), rand(1, 2.5));
+      }
+    },
+  ];
+}
+
 export function bush(S, p) {
   const { scheme } = S;
   const r = p.r;
   const hz = p.haze ?? 0;
   const leafy = scheme.leafy && chance(0.6);
-  const base = leafy ? scheme.leaf : [scheme.tree.dark, scheme.tree.mid, scheme.tree.light, scheme.leaf[3]];
+  const base = p.leaf || (leafy ? scheme.leaf : [scheme.tree.dark, scheme.tree.mid, scheme.tree.light, scheme.leaf[3]]);
   const leaf = base.map((c) => mix(c, S.haze, hz));
-  leaf[3] = mix(leaf[3], p.tint, 0.5);
+  if (!p.leaf) leaf[3] = mix(leaf[3], p.tint, 0.5);
   let clusters;
   if (p.shape) {
     const { box } = p.shape;

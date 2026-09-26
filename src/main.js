@@ -156,6 +156,8 @@ function load(id, focus = false) {
 load(loaded);
 
 const currentPigment = () => (loaded === 'surprise' ? pick(PIGMENTS) : PIGMENTS.find((p) => p.id === loaded));
+// For accidents you didn't make: a loaded paint is used as is; on Surprise me, the accident picks a paint that suits it.
+const accidentPigment = () => (loaded === 'surprise' ? undefined : currentPigment());
 
 // ——— intro demo and first-time hint ———
 
@@ -175,7 +177,7 @@ function runDemo() {
     ['bank', 4000],
     ['tree', 5800],
   ];
-  for (const [hint, at] of steps) demoTimers.push(setTimeout(() => studio.randomAccident({ hint, pigment: currentPigment(), delay: 400 }), at));
+  for (const [hint, at] of steps) demoTimers.push(setTimeout(() => studio.randomAccident({ hint, delay: 400 }), at));
   demoTimers.push(setTimeout(() => narrate({ line: line('invite'), info: '' }), 8600));
 }
 
@@ -259,7 +261,7 @@ canvas.addEventListener('contextmenu', (e) => e.preventDefault());
 
 function oops() {
   userActed();
-  studio.randomAccident({ pigment: currentPigment() });
+  studio.randomAccident({ pigment: accidentPigment() });
 }
 
 let autoTimer = null;
@@ -281,7 +283,7 @@ function tickAuto(delay) {
       narrate({ line: line('done'), info: '' });
       return;
     }
-    if (studio.active.length < 2) studio.randomAccident({ pigment: currentPigment() });
+    if (studio.active.length < 2) studio.randomAccident({ pigment: accidentPigment() });
     tickAuto(rand(1300, 2400));
   }, delay);
 }

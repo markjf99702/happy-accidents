@@ -1,6 +1,6 @@
 // Palette-knife mountains and the quiet row of distant trees along the horizon.
 import { rand, randi, chance, clamp } from '../util.js';
-import { rgba, mix, jitter, darken } from '../color.js';
+import { rgba, mix, jitter, darken, lighten } from '../color.js';
 import { bristle, linePts, knife, pathOf, mistAtop } from '../brush.js';
 import { topEdge, heights, at } from '../shape.js';
 
@@ -69,8 +69,11 @@ export function mountain(S, p) {
   const path = pathOf(outline);
 
   const hazeAmt = [0.3, 0.14, 0.04][idx];
-  const c0 = mix(mix(layer, p.tint, 0.1), S.haze, hazeAmt);
-  const hi = scheme.snow ? scheme.mtn.snow : scheme.mtn.light;
+  const tintAmt = p.tintAmt ?? 0.1;
+  const c0 = mix(mix(layer, p.tint, tintAmt), S.haze, hazeAmt);
+  const snowOn = p.snowy ?? scheme.snow;
+  const hi = snowOn ? scheme.mtn.snow : scheme.mtn.light;
+  const rockLight = mix(scheme.mtn.light, lighten(p.tint, 0.45), tintAmt * 0.6);
   const shadowC = mix(scheme.mtn.shadow, c0, 0.45);
   const L = S.lightDir;
   const box = { x: px - halfL - 10, y: peakY - 10, w: halfL + halfR + 20, h: base + 24 - peakY };
@@ -119,7 +122,7 @@ export function mountain(S, p) {
     if (rel > 0.8) continue;
     strokes.push({ x: a[0], y: a[1], lit, rel });
   }
-  const snowLine = rand(0.35, 0.55);
+  const snowLine = p.snowLine ?? rand(0.35, 0.55);
   for (let s = 0; s < strokes.length; s += 8) {
     const chunk = strokes.slice(s, s + 8);
     ops.push((ctx) => {
@@ -130,8 +133,8 @@ export function mountain(S, p) {
         if (st.lit) {
           const len = span * rand(0.12, 0.5) * (1 - st.rel * 0.6);
           const dx = L * rand(0.25, 0.75);
-          const snowy = scheme.snow && st.rel < snowLine;
-          const col = snowy ? jitter(hi, 0.02) : mix(scheme.mtn.light, c0, 0.25 + st.rel * 0.5);
+          const snowy = snowOn && st.rel < snowLine;
+          const col = snowy ? jitter(hi, 0.02) : mix(rockLight, c0, 0.25 + st.rel * 0.5);
           knife(ctx, st.x, st.y + 0.5, st.x + dx * len, st.y + len, rand(3, 9), col, snowy ? 0.92 : 0.7, 0.45);
         } else if (chance(0.6)) {
           const len = span * rand(0.1, 0.35);
@@ -167,8 +170,8 @@ export function mountain(S, p) {
         ctx.clip(path);
         for (const [sx, sy] of chunk) {
           const rel = (sy - peakY) / hgt;
-          const snowy = scheme.snow && rel < snowLine;
-          const col = snowy ? jitter(hi, 0.03) : mix(scheme.mtn.light, c0, 0.35 + rel * 0.5);
+          const snowy = snowOn && rel < snowLine;
+          const col = snowy ? jitter(hi, 0.03) : mix(rockLight, c0, 0.35 + rel * 0.5);
           const l = rand(8, 30) * (1 - rel * 0.5);
           knife(ctx, sx, sy, sx + L * l * rand(0.6, 1.1), sy + l * rand(0.5, 0.9), rand(3, 7), col, snowy ? 0.85 : 0.6, 0.5);
           if (chance(0.5)) knife(ctx, sx + 1, sy, sx - L * l * 0.6, sy + l * 0.7, rand(2, 5), shadowC, 0.35, 0.55);
@@ -212,8 +215,8 @@ export function treeline(S, p) {
   const x0 = p.x - w / 2;
   const x1 = p.x + w / 2;
   const hz = p.haze ?? 0.4;
-  const c = mix(mix(scheme.tree.dark, p.tint, 0.06), S.haze, hz);
-  const cl = mix(scheme.tree.light, S.haze, Math.min(0.9, hz + 0.1));
+  const c = mix(mix(scheme.tree.dark, p.tint, p.tintAmt ?? 0.06), S.haze, hz);
+  const cl = p.snowy ? [248, 250, 255] : mix(mix(scheme.tree.light, p.tint, (p.tintAmt ?? 0) * 0.6), S.haze, Math.min(0.9, hz + 0.1));
   const ground = mix(scheme.ground.dark, S.haze, hz);
   const maxH = clamp(p.R * 0.9, 14, 40) * scale;
 
@@ -266,7 +269,7 @@ export function treeline(S, p) {
   ops.push((ctx) => {
     ctx.lineCap = 'round';
     for (const tr of trees) {
-      if (!chance(0.35)) continue;
+      if (!chance(p.snowy ? 0.85 : 0.35)) continue;
       const top = baseY + tr.dy - tr.h;
       ctx.strokeStyle = rgba(cl, 0.45);
       ctx.lineWidth = 0.9;

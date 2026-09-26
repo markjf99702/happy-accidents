@@ -15,8 +15,36 @@ export const H = 900;
 // Things that change when paint lands on them.
 const REACTIVE = new Set(['evergreen', 'deciduous', 'bush', 'mountain', 'sun', 'moon', 'cloud', 'cabin', 'rock']);
 
+// Paints that suit each kind of accident, for when nobody has loaded the brush. Repeats weight the pick.
+const PAINT_FOR = {
+  cloud: ['titanium-white', 'titanium-white', 'titanium-white', 'alizarin-crimson', 'cadmium-yellow', 'van-dyke-brown', 'prussian-blue'],
+  mountain: ['titanium-white', 'titanium-white', 'phthalo-blue', 'prussian-blue', 'van-dyke-brown', 'sap-green'],
+  sun: ['cadmium-yellow', 'cadmium-yellow', 'indian-yellow', 'titanium-white'],
+  birds: ['van-dyke-brown', 'prussian-blue'],
+  treeline: ['sap-green', 'sap-green', 'phthalo-blue', 'titanium-white'],
+  bank: ['sap-green', 'sap-green', 'van-dyke-brown', 'yellow-ochre'],
+  tree: ['sap-green', 'sap-green', 'sap-green', 'phthalo-blue', 'titanium-white', 'bright-red', 'cadmium-yellow', 'indian-yellow', 'van-dyke-brown'],
+  cabin: ['van-dyke-brown', 'van-dyke-brown', 'bright-red'],
+  water: ['phthalo-blue', 'titanium-white', 'titanium-white', 'bright-red', 'cadmium-yellow'],
+};
+
+// And the other way round: what a loaded paint can sensibly be aimed at.
+const FITS = {
+  white: ['cloud', 'mountain', 'sun', 'treeline', 'tree', 'water'],
+  yellow: ['sun', 'cloud', 'tree', 'water'],
+  red: ['cloud', 'tree', 'cabin', 'water'],
+  green: ['mountain', 'treeline', 'bank', 'tree'],
+  blue: ['mountain', 'birds', 'treeline', 'tree', 'water', 'cloud'],
+  brown: ['mountain', 'birds', 'bank', 'cabin', 'cloud', 'tree'],
+};
+
 // Things a splat can land on without touching them: the sky itself, light, weather and small marks.
 const SEE_THROUGH = new Set(['sky', 'sunpath', 'signature', 'mist', 'aurora', 'stars', 'birds', 'ripples', 'rain', 'foothills', 'waterfall', 'flowers']);
+
+const paintFor = (hint) => {
+  const id = pick(PAINT_FOR[hint] || PAINT_FOR.cloud);
+  return PIGMENTS.find((p) => p.id === id);
+};
 
 export class Studio {
   constructor(canvas, hooks = {}) {
@@ -375,6 +403,7 @@ export class Studio {
     st.spec = spec;
     if (!st.quiet) this.say(st.say ?? st.kind, spec.kind, sp.mixPigment || sp.pigment);
     const el = spec.onto ? this.paintOnto(spec.onto, spec) : this.addElement(spec);
+    spec.el = el;
     el.onProgress = (t) => {
       sp.alpha = Math.min(sp.alpha, 1 - clamp(((i + t) / plan.length) * 1.4, 0, 1));
     };
@@ -417,21 +446,23 @@ export class Studio {
   }
 
   // An accident nobody asked for. hint nudges it toward something the painting could use.
+  // With a paint given, it only aims where that color makes sense; without one, it picks a
+  // paint that suits what it's aiming at.
   randomAccident(opts = {}) {
     const ang = rand(TAU);
     const speed = chance(0.5) ? rand(0.2, 1.6) : 0;
-    const pigment = opts.pigment ?? pick(PIGMENTS);
-    const base = { vx: Math.cos(ang) * speed, vy: Math.sin(ang) * speed, pigment, delay: opts.delay };
+    const motion = { vx: Math.cos(ang) * speed, vy: Math.sin(ang) * speed, delay: opts.delay };
 
     // Now and then, land right on something that's already painted and see what it does to it.
     const targets = this.elements.filter((e) => REACTIVE.has(e.kind));
     if (!opts.hint && targets.length > 2 && chance(0.28)) {
       const t = pick(targets);
       const spot = this.spotOn(t);
-      if (spot) return this.addSplat({ ...base, ...spot });
+      if (spot) return this.addSplat({ ...motion, pigment: opts.pigment ?? pick(PIGMENTS), ...spot });
     }
 
-    let hint = opts.hint ?? this.pickHint();
+    const fits = opts.pigment ? FITS[opts.pigment.family] : null;
+    let hint = opts.hint ?? this.pickHint(fits);
     let spot = null;
     // Otherwise look for open space, so the painting keeps growing.
     for (let i = 0; i < 8 && !spot; i++) {
@@ -439,10 +470,11 @@ export class Studio {
       if (s && (i === 7 || !this.elementAt(s.x, s.y, s.R))) spot = s;
     }
     if (!spot) {
-      hint = 'cloud';
+      hint = fits && !fits.includes('cloud') ? 'mountain' : 'cloud';
       spot = this.spotFor(hint);
     }
-    return this.addSplat({ ...base, ...spot, hint });
+    const pigment = opts.pigment ?? paintFor(hint);
+    return this.addSplat({ ...motion, pigment, ...spot, hint });
   }
 
   // A point that's actually on an element.
@@ -466,9 +498,10 @@ export class Studio {
     }
   }
 
-  pickHint() {
+  pickHint(fits) {
     const c = (k) => this.count(k);
     const land = this.findLand() !== null;
+    const ok = ([hint]) => !fits || fits.includes(hint);
     return weighted([
       ['cloud', c('cloud') < 3 ? 2.2 : 0.7],
       ['mountain', c('mountain') === 0 ? 3.5 : c('mountain') < 3 ? 1.1 : 0],
@@ -479,7 +512,7 @@ export class Studio {
       ['tree', land ? 3.2 + c('bank') * 0.3 : 0],
       ['cabin', land && !this.has('cabin') ? 0.5 : 0],
       ['water', 0.6],
-    ]);
+    ].map((e) => (ok(e) ? e : [e[0], 0])));
   }
 
   spotFor(hint) {

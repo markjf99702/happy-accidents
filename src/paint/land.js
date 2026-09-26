@@ -88,9 +88,13 @@ export function bank(S, p) {
 
   const hzAmt = (1 - dT) * 0.35;
   const snowy = scheme.id === 'winter-hush';
-  const dark = mix(mix(snowy ? mix(scheme.ground.dark, scheme.ground.mid, 0.5) : scheme.ground.dark, p.tint, 0.08), S.haze, hzAmt);
-  const mid = mix(scheme.ground.mid, S.haze, hzAmt * 0.9);
-  const light = mix(scheme.ground.light, S.haze, hzAmt * 0.7);
+  // p.ground is the paint's own earth (dark, mid, light), laid over the mood's ground.
+  const g = [snowy ? mix(scheme.ground.dark, scheme.ground.mid, 0.5) : scheme.ground.dark, scheme.ground.mid, scheme.ground.light].map((c, i) =>
+    p.ground ? mix(c, p.ground[i], 0.65) : c,
+  );
+  const dark = mix(p.ground ? g[0] : mix(g[0], p.tint, 0.08), S.haze, hzAmt);
+  const mid = mix(g[1], S.haze, hzAmt * 0.9);
+  const light = mix(g[2], S.haze, hzAmt * 0.7);
   const scale = 0.5 + dT * 1.8;
   const L = S.lightDir;
 
@@ -237,7 +241,7 @@ export function cabin(S, p) {
     [fx1 + s * 0.05, by - wallH + s * 0.03],
   ]);
 
-  const wood = mix(hex('#4a3322'), scheme.ground.dark, 0.25);
+  const wood = p.wall ?? mix(hex('#4a3322'), scheme.ground.dark, 0.25);
   const lit = mix(wood, scheme.mtn.light, 0.38);
   const shade = darken(wood, 0.35);
   const roofC = scheme.snow ? mix(scheme.ground.mid, [255, 255, 255], 0.3) : mix(hex('#3a2a22'), p.tint, 0.15);
