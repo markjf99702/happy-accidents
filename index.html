@@ -1,0 +1,114 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Happy Accidents</title>
+<meta name="description" content="Flick paint at a canvas. Every splat becomes part of a landscape.">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Cpath fill='%2315418a' d='M33 6c6 0 5 9 11 10s12-4 13 3-8 8-6 14 9 9 5 14-10-1-14 4-2 12-9 12-5-9-11-10-12 5-15-2 7-9 5-15S3 28 8 23s11 2 14-4 4-13 11-13z'/%3E%3Ccircle cx='26' cy='24' r='5' fill='%23fff' opacity='.55'/%3E%3C/svg%3E">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Caprasimo&family=Figtree:ital,wght@0,400;0,500;0,600;0,700;1,400;1,500&family=Mrs+Saint+Delafield&display=swap">
+<link rel="stylesheet" href="styles.css">
+</head>
+<body>
+<div class="app" id="app">
+  <header class="top">
+    <div class="brand">
+      <h1 class="mark">Happy Accidents</h1>
+      <p class="episode"><span id="canvasNo">Canvas No. 1</span> <span aria-hidden="true">·</span> <span id="schemeName">Golden Hour</span></p>
+    </div>
+    <div class="top-actions">
+      <button type="button" class="quiet" id="soundBtn" aria-pressed="false">Sound off</button>
+      <button type="button" class="quiet" id="galleryBtn">Gallery <span class="count" id="galleryCount"></span></button>
+    </div>
+  </header>
+
+  <main class="stage" id="stage">
+    <div class="easel" id="easel">
+      <div class="clamp" aria-hidden="true"></div>
+      <canvas id="canvas" aria-label="Painting canvas. Tap, flick, or press and hold to spill paint on it." tabindex="0"></canvas>
+      <p class="hint" id="hint">Tap, flick, or press and hold. The paint decides the rest.</p>
+      <div class="ledge" aria-hidden="true"></div>
+    </div>
+  </main>
+
+  <section class="tray" aria-label="Painter">
+    <div class="voice" aria-live="polite">
+      <p class="line" id="line">Let’s put a little color on this canvas and see what shows up.</p>
+      <p class="tool" id="tool">2-inch brush · Liquid White</p>
+    </div>
+
+    <div class="palette-block">
+      <p class="loaded"><span class="loaded-label">Brush</span> <span id="loadedName">Surprise me</span></p>
+      <div class="palette" id="palette" role="radiogroup" aria-label="Paint on the brush"></div>
+    </div>
+
+    <div class="actions">
+      <button type="button" id="oopsBtn" title="A random accident (Space)">Oops</button>
+      <button type="button" id="autoBtn" aria-pressed="false" title="Accidents keep happening on their own (A)">Let it happen</button>
+      <button type="button" id="newBtn" title="Start a fresh canvas (N)">New canvas</button>
+      <button type="button" id="signBtn" class="primary" title="Sign and hang it (S)">Sign it</button>
+    </div>
+    <p class="keys"><span><kbd>Space</kbd>oops</span> <span><kbd>A</kbd>auto</span> <span><kbd>S</kbd>sign</span> <span><kbd>N</kbd>new</span> <span><kbd>G</kbd>gallery</span></p>
+  </section>
+</div>
+
+<div class="overlay" id="signSheet" hidden>
+  <form class="sheet" id="signForm" autocomplete="off">
+    <h2 class="sheet-title">Sign your painting</h2>
+    <label class="field" for="artistName">
+      <span>Your name</span>
+      <input id="artistName" name="artist" maxlength="28" placeholder="Anonymous" required>
+    </label>
+    <label class="field" for="artTitle">
+      <span>Title</span>
+      <span class="with-button">
+        <input id="artTitle" name="title" maxlength="60">
+        <button type="button" class="quiet small" id="rerollBtn">Another</button>
+      </span>
+    </label>
+    <div class="sheet-actions">
+      <button type="button" class="quiet" id="cancelSign">Not yet</button>
+      <button type="submit" class="primary">Sign it</button>
+    </div>
+  </form>
+</div>
+
+<div class="overlay" id="placard" hidden>
+  <div class="placard" role="dialog" aria-modal="true" aria-labelledby="plTitle">
+    <figure class="frame"><img id="placardImg" alt=""></figure>
+    <div class="placard-side">
+      <aside class="label">
+        <p class="label-artist" id="plArtist">Anonymous</p>
+        <p class="label-title"><cite id="plTitle">Untitled</cite>, <span id="plYear">2026</span></p>
+        <p class="label-medium">Oil on canvas<br>18 × 24 in. (45.7 × 61 cm)</p>
+        <p class="label-note" id="plNote"></p>
+        <p class="label-note" id="plFeatures"></p>
+        <p class="label-credit" id="plCredit">Collection of the artist</p>
+      </aside>
+      <div class="placard-actions">
+        <button type="button" class="primary" id="anotherBtn">Paint another</button>
+        <button type="button" class="quiet" id="keepBtn">Back to the easel</button>
+        <a class="button quiet" id="downloadLink" download="happy-accident.png" href="#">Download image</a>
+      </div>
+      <p class="save-hint" id="saveHint" hidden>Long-press or right-click the painting to save it.</p>
+    </div>
+  </div>
+</div>
+
+<div class="overlay" id="gallery" hidden>
+  <div class="wall" role="dialog" aria-modal="true" aria-labelledby="wallTitle">
+    <div class="wall-head">
+      <h2 class="wall-title" id="wallTitle">The gallery wall</h2>
+      <button type="button" class="quiet" id="closeGallery">Close</button>
+    </div>
+    <p class="wall-empty" id="wallEmpty">Nothing hanging yet. Sign a painting and it goes up on this wall.</p>
+    <ul class="wall-grid" id="wallGrid"></ul>
+    <p class="wall-note">Paintings stay in this browser only.</p>
+  </div>
+</div>
+
+<script type="module" src="src/main.js"></script>
+</body>
+</html>

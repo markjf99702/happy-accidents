@@ -1,0 +1,14 @@
+{
+  "name": "happy-accidents",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Flick paint at a canvas. Every splat becomes part of a landscape.",
+  "type": "module",
+  "scripts": {
+    "start": "npx --yes http-server -c-1 -p 8080 .",
+    "build": "node scripts/build.mjs"
+  },
+  "devDependencies": {
+    "esbuild": "^0.28.2"
+  }
+}
