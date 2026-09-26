@@ -6,7 +6,7 @@ import { join, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { featureLine, madeFrom, durationText, makeTitle, toolInfo, LINES } from '../src/words.js';
 import { topEdge, heights, at, span, sideProfile } from '../src/shape.js';
-import { ramp, mix, hex } from '../src/color.js';
+import { ramp, mix, hex, mixPaint, familyOf, colorName } from '../src/color.js';
 import { weighted, pickFresh, clamp } from '../src/util.js';
 import { SCHEMES, PIGMENTS } from '../src/schemes.js';
 
@@ -68,6 +68,23 @@ test('colors mix and ramp', () => {
   const stops = [[0, [0, 0, 0]], [1, [255, 255, 255]]];
   assert.deepEqual(ramp(stops, 0.5), [127.5, 127.5, 127.5]);
   assert.deepEqual(ramp(stops, -1), [0, 0, 0]);
+});
+
+test('paint mixes like paint, and the mix decides its family', () => {
+  for (const p of PIGMENTS) assert.equal(familyOf(p.rgb), p.family, `${p.name} reads as ${p.family}`);
+  const P = Object.fromEntries(PIGMENTS.map((p) => [p.id, p.rgb]));
+  const fam = (a, b, wa = 1, wb = 1) => familyOf(mixPaint([[P[a], wa], [P[b], wb]]));
+  assert.equal(fam('cadmium-yellow', 'phthalo-blue'), 'green', 'yellow and blue make green');
+  assert.equal(fam('cadmium-yellow', 'prussian-blue'), 'green');
+  assert.equal(fam('bright-red', 'cadmium-yellow'), 'yellow', 'red and yellow make orange, which acts like yellow');
+  assert.equal(colorName(mixPaint([[P['bright-red'], 1], [P['cadmium-yellow'], 1]])), 'orange');
+  assert.equal(fam('bright-red', 'titanium-white'), 'red', 'red and white make pink');
+  assert.equal(colorName(mixPaint([[P['bright-red'], 1], [P['titanium-white'], 1]])), 'pink');
+  assert.equal(fam('bright-red', 'sap-green'), 'brown', 'red and green make brown');
+  assert.equal(fam('titanium-white', 'phthalo-blue'), 'blue');
+  assert.equal(colorName(mixPaint([[P['titanium-white'], 3], [P['phthalo-blue'], 1]])), 'pale blue', 'mostly white with some blue is pale blue');
+  const same = mixPaint([[P['sap-green'], 2], [P['sap-green'], 5]]);
+  same.forEach((v, i) => assert.ok(Math.abs(v - P['sap-green'][i]) < 1, 'a paint mixed with itself stays itself'));
 });
 
 test('small helpers behave', () => {

@@ -148,6 +148,16 @@ export function line(key) {
   return pickFresh(key, LINES[key] || []);
 }
 
+// Two paints ran together into a new color.
+export function mixLine(names, color) {
+  const list = names.length > 2 ? `${names.slice(0, -1).join(', ')} and ${names[names.length - 1]}` : names.join(' and ');
+  return pickFresh('mix', [
+    `${list} ran together. That’s ${color} now.`,
+    `${list} make ${color}. Let’s see what ${color} wants to be.`,
+    `Wet into wet: ${list}. Now it’s ${color}.`,
+  ]);
+}
+
 export function toolInfo(kind, pigment) {
   const t = TOOLS[kind];
   if (!t) return '';

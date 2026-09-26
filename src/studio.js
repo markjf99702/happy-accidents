@@ -2,12 +2,12 @@
 // to be turned into something, the lake reflection, and the animation loop.
 import { SCHEMES, PIGMENTS, pickScheme } from './schemes.js';
 import { TAU, rand, clamp, chance, pick, weighted } from './util.js';
-import { rgba, darken } from './color.js';
+import { rgba, darken, mix, mixPaint, familyOf, colorName } from './color.js';
 import { makeSplat, renderSplat } from './splat.js';
 import { decide } from './decide.js';
 import { sky, signature, SIGNATURE_FONT } from './paint/index.js';
 import { bristle, linePts } from './brush.js';
-import { line, toolInfo } from './words.js';
+import { line, toolInfo, mixLine } from './words.js';
 
 export const W = 1200;
 export const H = 900;
@@ -360,14 +360,33 @@ export class Studio {
       y: parts.reduce((s, p, i) => s + p.y * areas[i], 0) / total,
     };
     a.effR = Math.sqrt(parts.reduce((s, p) => s + p.R * p.R, 0));
-    // The colors run together too.
-    const rgb = [0, 1, 2].map((c) => parts.reduce((s, p, i) => s + p.pigment.rgb[c] * areas[i], 0) / total);
+    // The colors run together too, the way paint does: yellow into blue makes green. The mix,
+    // not either paint, decides what it becomes.
+    const rgb = mixPaint(parts.map((p, i) => [p.pigment.rgb, areas[i]]));
     const main = parts[areas.indexOf(Math.max(...areas))].pigment;
     const names = [...new Set(parts.map((p) => p.pigment.name))];
-    a.mixPigment = { ...main, name: names.join(' and '), rgb };
+    a.mixPigment = { ...main, id: names.length > 1 ? 'mix' : main.id, name: names.join(' and '), family: familyOf(rgb), rgb };
+    // Each part runs toward the new color while it's still wet.
+    const t0 = performance.now();
+    for (const p of parts) {
+      p.tintFrom = p.color || p.pigment.rgb;
+      p.tintTo = rgb;
+      p.tintT0 = t0;
+    }
     clearTimeout(a.timer);
-    a.timer = setTimeout(() => this.resolve(a), rand(500, 800));
-    this.say('merge', 'merge');
+    a.timer = setTimeout(() => this.resolve(a), rand(800, 1100));
+    if (names.length > 1) this.hooks.onNarrate?.({ line: mixLine(names, colorName(rgb)), info: '', kind: 'merge' });
+    else this.say('merge', 'merge');
+    this.kick();
+  }
+
+  // Paint stays wet while you reach for another color, so the next splat can run into it.
+  keepWet(ms = 1800) {
+    for (const s of this.splats) {
+      if (s.state !== 'wet' || s.gen !== this.gen) continue;
+      clearTimeout(s.timer);
+      s.timer = setTimeout(() => this.resolve(s), ms);
+    }
   }
 
   resolve(sp) {
@@ -617,6 +636,12 @@ export class Studio {
     for (const s of this.splats) {
       if (s.state === 'fading') s.alpha -= dt / 350;
       else if (s.parent) s.alpha = s.parent.alpha;
+      if (s.tintT0) {
+        const t = clamp((now - s.tintT0) / 700, 0, 1);
+        s.color = mix(s.tintFrom, s.tintTo, t * t * (3 - 2 * t));
+        renderSplat(s, this.k);
+        if (t >= 1) s.tintT0 = null;
+      }
     }
     this.splats = this.splats.filter((s) => s.alpha > 0.01);
 
@@ -630,7 +655,7 @@ export class Studio {
 
     this.render(now);
 
-    const animating = this.active.length || this.pool || this.splats.some((s) => now - s.born < 240 || s.state === 'fading' || s.state === 'absorbing');
+    const animating = this.active.length || this.pool || this.splats.some((s) => now - s.born < 240 || s.tintT0 || s.state === 'fading' || s.state === 'absorbing');
     if (animating) requestAnimationFrame(this.frame);
     else {
       this.running = false;
@@ -719,7 +744,7 @@ export class Studio {
     if (s.trail?.length) {
       ctx.save();
       ctx.globalAlpha = clamp(s.alpha, 0, 1);
-      ctx.fillStyle = rgba(s.pigment.rgb);
+      ctx.fillStyle = rgba(s.color || s.pigment.rgb);
       for (const d of s.trail) {
         ctx.beginPath();
         ctx.arc(d.x, d.y, d.r, 0, TAU);

@@ -74,18 +74,41 @@ await page.waitForTimeout(200);
 await settle();
 assert.equal(await S(() => window.happyAccidents.accidents), 3);
 
-// Two wet splats that touch run together into one.
+// Two wet splats that touch run together into one, and their paints mix like paint: yellow into blue is green,
+// and green in the lake makes land.
+before = await total();
 await S(async () => {
   const { PIGMENTS } = await import('./src/schemes.js');
   const st = window.happyAccidents;
-  st.addSplat({ x: 640, y: st.hy + 200, R: 22, pigment: PIGMENTS[7], delay: 800 });
-  st.addSplat({ x: 660, y: st.hy + 205, R: 22, pigment: PIGMENTS[4], delay: 800 });
+  const paint = (id) => PIGMENTS.find((p) => p.id === id);
+  st.addSplat({ x: 640, y: st.hy + 200, R: 22, pigment: paint('cadmium-yellow'), delay: 800 });
+  st.addSplat({ x: 660, y: st.hy + 205, R: 22, pigment: paint('phthalo-blue'), delay: 800 });
 });
 assert.equal(await S(() => window.happyAccidents.splats.filter((s) => s.state === 'merged').length), 1, 'the second splat ran into the first');
+assert.equal(await S(() => window.happyAccidents.splats.find((s) => s.mixPigment).mixPigment.family), 'green', 'yellow and blue mixed into green');
+await page.waitForTimeout(300);
+assert.match(await page.textContent('#line'), /green/, 'the painter says what color it made');
 await page.waitForTimeout(200);
+await settle();
+const made = await S(() => ['bank', 'island'].reduce((n, k) => n + (window.happyAccidents.counts[k] || 0), 0));
+assert.ok(made >= 1, 'the green mix in the lake became land');
+
+// Picking another paint keeps a fresh splat wet long enough to hit it again.
+await S(async () => {
+  const { PIGMENTS } = await import('./src/schemes.js');
+  const st = window.happyAccidents;
+  st.addSplat({ x: 300, y: st.hy * 0.3, R: 20, pigment: PIGMENTS[0], delay: 300 });
+});
+await page.click('[data-id="bright-red"]');
+await page.waitForTimeout(900);
+assert.equal(await S(() => window.happyAccidents.splats.filter((s) => s.state === 'wet').length), 1, 'the splat is still wet after picking a new paint');
+await page.click('[data-id="surprise"]');
+await page.waitForTimeout(2000);
 await settle();
 
 // Paint on something that's already there changes it: white on a mountain is fresh snow.
+await S(() => window.happyAccidents.newCanvas('golden-hour'));
+await settle();
 await S(async () => {
   const { PIGMENTS } = await import('./src/schemes.js');
   const st = window.happyAccidents;

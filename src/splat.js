@@ -130,7 +130,7 @@ export function renderSplat(sp, k) {
   const ctx = c.getContext('2d');
   ctx.setTransform(k, 0, 0, k, ext * k, ext * k);
   ctx.clearRect(-ext, -ext, ext * 2, ext * 2);
-  const col = sp.pigment.rgb;
+  const col = sp.color || sp.pigment.rgb;
   const body = blobPath(sp);
   const drops = dropPoints(sp);
   const dropPath = new Path2D();

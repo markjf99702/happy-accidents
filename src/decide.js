@@ -5,7 +5,7 @@
 // Returns a plan: a list of steps, each of which builds one painted element (or paints onto
 // an existing one) when its turn comes.
 import { chance, clamp, rand, weighted, pick } from './util.js';
-import { hex, mix, lighten, darken, lum } from './color.js';
+import { hex, mix, lighten, darken, lum, hsl } from './color.js';
 import { splatShape } from './splat.js';
 import * as P from './paint/index.js';
 import * as R from './paint/react.js';
@@ -35,7 +35,10 @@ export function decide(S, sp) {
   const center = sp.center || { x: sp.x, y: sp.y };
   const pigment = sp.mixPigment || sp.pigment;
   const b = { x: center.x, y: center.y, R: sp.effR || sp.R, tint: pigment.rgb, elong: sp.stretch, shape: splatShape(sp) };
-  const c = { fam: pigment.family, id: pigment.id, rgb: pigment.rgb };
+  // The paint as it is now, mixed or not. Earthy yellows (ochre) make ground; very dark blues (Prussian) carry rain.
+  const c = { fam: pigment.family, rgb: pigment.rgb };
+  c.earthy = c.fam === 'yellow' && hsl(c.rgb).s < 0.7;
+  c.stormy = c.fam === 'blue' && lum(c.rgb) < 0.2;
   const hint = sp.hint;
   const vertical = Math.abs(Math.sin(sp.ang)) > 0.7 && sp.stretch > 1.35;
 
@@ -154,7 +157,7 @@ function sky(S, b, c, hint) {
   switch (c.fam) {
     case 'yellow':
       if (!lit && hint !== 'cloud' && hint !== 'mountain' && skyT < 0.85) return sunSteps(S, b, c);
-      if (c.id === 'yellow-ochre' && mountainy(0.35)) return [mountainStep(S, b, { tintAmt: 0.35 }, 'goldMountain')];
+      if (c.earthy && mountainy(0.35)) return [mountainStep(S, b, { tintAmt: 0.35 }, 'goldMountain')];
       return [step('cloud', () => P.cloud(S, { ...b, ...cloudLook(S, c) }), { say: 'goldenCloud' })];
 
     case 'white':
@@ -176,7 +179,7 @@ function sky(S, b, c, hint) {
     }
 
     case 'blue':
-      if (c.id === 'prussian-blue' && hint !== 'mountain' && (hint === 'cloud' || !lowSky) && chance(0.5)) return stormSteps(S, b, c, 1);
+      if (c.stormy && hint !== 'mountain' && (hint === 'cloud' || !lowSky) && chance(0.5)) return stormSteps(S, b, c, 1);
       if (mountainy(0.7)) return [mountainStep(S, b, { tintAmt: 0.4 }, 'blueMountain')];
       if (!hint && b.R < 24 && chance(0.25)) return [birdsStep(S, b, c)];
       return [step('cloud', () => P.cloud(S, { ...b, ...cloudLook(S, c) }), { say: 'coolCloud' })];
@@ -324,7 +327,7 @@ function low(S, b, c, hint, vertical) {
 }
 
 // Greens, browns and ochre make ground; other paints stay on the water.
-const makesLand = (c) => c.fam === 'green' || c.fam === 'brown' || c.id === 'yellow-ochre';
+const makesLand = (c) => c.fam === 'green' || c.fam === 'brown' || c.earthy;
 
 function water(S, b, c, hint, vertical, dT) {
   const { W } = S;

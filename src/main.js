@@ -126,7 +126,10 @@ const dabs = OPTIONS.map((o) => {
   b.title = o.code ? `${o.name} · ${o.code}` : o.name;
   if (o.hex) b.style.setProperty('--c', o.hex);
   b.dataset.id = o.id;
-  b.addEventListener('click', () => load(o.id, true));
+  b.addEventListener('click', () => {
+    load(o.id, true);
+    studio.keepWet();
+  });
   b.addEventListener('keydown', (e) => {
     const i = OPTIONS.indexOf(o);
     let next = null;
@@ -135,6 +138,7 @@ const dabs = OPTIONS.map((o) => {
     if (next) {
       e.preventDefault();
       load(next.id, true);
+      studio.keepWet();
     }
   });
   paletteEl.appendChild(b);
