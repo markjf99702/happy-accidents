@@ -9,15 +9,16 @@ export const LINES = {
   ],
   cloud: [
     'That one wants to float. We’ll let it be a cloud.',
+    'Same shape as the paint, just fluffier.',
     'A little cloud drifted in. He can stay.',
     'Clouds are free. Take as many as you like.',
     'Scrub it in, soft and loose. Clouds don’t really have edges.',
   ],
   mountain: [
     'Oh, that’s a mountain. You can tell by the way it sits there.',
+    'See the top of your splat? That’s the ridge now. We just made it bigger.',
     'Push it up, let it be big. Mountains don’t apologize.',
-    'Knife in, pull it down, and let the light find its own way.',
-    'There was a mountain hiding in that one the whole time.',
+    'There was a mountain hiding in that one the whole time. Same shape and everything.',
   ],
   foothills: ['A few little trees climbing up the hill.', 'Some trees wandered up the mountain. That’s allowed.'],
   mist: ['Let a little mist drift through here. It softens everything.'],
@@ -41,17 +42,36 @@ export const LINES = {
   family: ['Well, now it’s a whole family.'],
   flowers: ['A few little flowers came up there.', 'Just a dot of color. Leave it alone and it looks like flowers.'],
   cabin: ['Somebody lives here now. A little cabin, nice and cozy.', 'Put a little home in there. Everybody deserves a place to be.'],
-  bank: ['This needs some land under it. Let’s make some ground.', 'Pull a little land in from the side. The water will make room.'],
+  bank: ['This needs some land under it. Let’s make some ground.', 'Pull a little land in from the side. It’s the same shape as your splat.'],
   bankTree: ['He needs somewhere to stand. Land first, then the tree.'],
+  island: ['It spilled into an island. Same shape and everything.', 'Out in the middle of the lake, a little island.'],
+  islandTree: ['An island, and somebody’s already growing on it.'],
+  merge: ['Those two ran together. Now it’s one big thing.', 'Wet into wet. They’re one splat now.'],
+  treeSnow: ['Snow found him. He looks good in it.', 'Little bit of snow on the branches. Just tap it on top.'],
+  treeGlow: ['The light’s hitting him just right now.', 'Catch the edges with a little warm light.'],
+  autumn: ['That one turned. Fall came early for him.', 'You hit him with some color, so now it’s autumn over there.'],
+  company: ['You hit him, so now he’s got company.', 'He got bumped, and a friend showed up.'],
+  snowfall: ['Fresh snow up top. It came down overnight.', 'White on the mountain. It snowed.'],
+  waterfall: ['Blue on the mountain? That’s a waterfall now.', 'Water found a way down from right where you hit.'],
+  alpenglow: ['Now the mountain’s catching the last of the light.', 'Warm up the peaks. That’s the evening hitting them.'],
+  sunset: ['Paint on the sun, and the whole sky warms up.', 'You touched the sun. Everything goes a little golden.'],
+  cloudOverSun: ['A little cloud wandered across the sun.'],
+  storm: ['That cloud got heavy. Here comes a little rain.', 'Dark paint on a cloud means weather.'],
+  sunlitCloud: ['The edges of that cloud caught the light.'],
+  lights: ['Somebody’s home. The lights just came on.', 'Light in the window and smoke in the chimney.'],
+  roofSnow: ['Snow on the roof. Cozy in there.'],
+  garden: ['They planted a little garden out front.'],
+  moss: ['A little moss on the rock.'],
+  rockSnow: ['Snow on the rock.'],
   rock: ['A little rock, sitting in the water, minding its own business.', 'Knife it in, touch the top with light. That’s a rock now.'],
   ripples: ['Just a few ripples. The water noticed.', 'A little sparkle on the water.'],
-  birds: ['A couple of birds heard about the view.', 'Two little birds. Keep them small and they’ll be far away.'],
-  stars: ['Look at that. Stars.', 'A little spatter up there and the night fills itself in.'],
+  birds: ['Every little drop that flew off turned into a bird.', 'A couple of birds heard about the view.'],
+  stars: ['Look at that. Every drop’s a star.', 'A little spatter up there and the night fills itself in.'],
   sun: ['That’s a sun if I ever saw one.', 'Let’s give this painting some light.'],
   moon: ['The moon’s up. Everybody be quiet now.'],
   aurora: ['The sky’s doing that shimmery thing tonight.'],
   signature: ['Now sign it. That makes it yours.'],
-  invite: ['Your turn. Tap, flick, or press and hold anywhere on the canvas.'],
+  invite: ['Your turn. Tap, flick, or press and hold. Try hitting something that’s already there, too.'],
   done: ['That might be done. Sign it whenever you’re ready.'],
   undo: ['There’s no undo in here. Let’s see what it turns into instead.'],
   leave: ['That one landed off the canvas. Happens to everybody.'],
@@ -78,6 +98,21 @@ const TOOLS = {
   moon: ['1-inch brush', ['Titanium White', 'Prussian Blue']],
   aurora: ['2-inch brush', ['Phthalo Green', 'Titanium White']],
   signature: ['Liner brush', ['Bright Red']],
+  island: ['2-inch brush', ['Van Dyke Brown', 'Sap Green', 'Yellow Ochre']],
+  treeSnow: ['Fan brush', ['Titanium White']],
+  treeGlow: ['Fan brush', ['Cadmium Yellow', 'Titanium White']],
+  autumn: ['Round brush', ['Bright Red', 'Indian Yellow', 'Yellow Ochre']],
+  snowfall: ['Palette knife', ['Titanium White']],
+  waterfall: ['Liner brush', ['Titanium White', 'Phthalo Blue']],
+  alpenglow: ['Palette knife', ['Alizarin Crimson', 'Titanium White']],
+  sunset: ['2-inch brush', ['Cadmium Yellow', 'Alizarin Crimson']],
+  storm: ['1-inch brush', ['Midnight Black', 'Prussian Blue']],
+  rain: ['Fan brush', ['Liquid White']],
+  sunlitCloud: ['1-inch brush', ['Cadmium Yellow', 'Titanium White']],
+  lights: ['Liner brush', ['Cadmium Yellow', 'Indian Yellow']],
+  roofSnow: ['Palette knife', ['Titanium White']],
+  moss: ['Fan brush', ['Sap Green']],
+  rockSnow: ['Palette knife', ['Titanium White']],
 };
 
 export function line(key) {
@@ -114,6 +149,8 @@ function subjects(counts) {
   if (counts.evergreen) s.push(['Pine', 'Pines'], ['Evergreen', 'Evergreens']);
   if (counts.deciduous || counts.bush) s.push(['Grove', 'Groves'], ['Thicket', 'Thickets']);
   if (counts.rock) s.push(['Stone', 'Stones']);
+  if (counts.island) s.push(['Island', 'Islands']);
+  if (counts.waterfall) s.push(['Falls', 'Falls']);
   if (counts.moon || counts.stars) s.push(['Moon', 'Moons']);
   if (!s.length) s.push(['Water', 'Waters'], ['Sky', 'Skies'], ['Shore', 'Shores']);
   return s;
@@ -149,6 +186,9 @@ const FEATURE_NAMES = [
   ['birds', 'a pair of birds', 'flocks of birds'],
   ['flowers', 'some flowers', 'patches of flowers'],
   ['bank', 'a bit of shore', 'stretches of shore'],
+  ['island', 'an island', 'islands'],
+  ['waterfall', 'a waterfall', 'waterfalls'],
+  ['rain', 'a passing rainstorm', 'passing rainstorms'],
   ['treeline', 'a distant forest', 'distant forests'],
 ];
 

@@ -23,27 +23,41 @@ export function makeSplat({ x, y, vx = 0, vy = 0, R = 16, pigment, trail = [], h
   return { x, y, R, ang, stretch, speed, harm, spikes, drops, pigment, trail, hint, born: performance.now(), alpha: 1 };
 }
 
-function blobPath(sp) {
-  const path = new Path2D();
-  const N = 72;
+// The blob's outline in local coordinates (origin at the splat's center).
+export function blobPoints(sp, N = 72) {
   const pts = [];
+  const c = Math.cos(sp.ang);
+  const s = Math.sin(sp.ang);
   for (let i = 0; i < N; i++) {
     const th = (i / N) * TAU;
     let r = 1;
     for (const [k, a, p] of sp.harm) r += a * Math.sin(k * th + p);
-    for (const s of sp.spikes) {
-      let d = Math.abs(th - s.th);
+    for (const sk of sp.spikes) {
+      let d = Math.abs(th - sk.th);
       if (d > Math.PI) d = TAU - d;
-      if (d < s.w) r += s.len * Math.pow(1 - d / s.w, 2);
+      if (d < sk.w) r += sk.len * Math.pow(1 - d / sk.w, 2);
     }
     const lx = Math.cos(th) * r * sp.R * sp.stretch;
     const ly = Math.sin(th) * r * sp.R;
-    const c = Math.cos(sp.ang);
-    const s = Math.sin(sp.ang);
     pts.push([lx * c - ly * s, lx * s + ly * c]);
   }
+  return pts;
+}
+
+// Flung droplets in local coordinates.
+export function dropPoints(sp) {
+  return sp.drops.map((d) => {
+    const a = sp.ang + d.th;
+    return { x: Math.cos(a) * d.dist * sp.R, y: Math.sin(a) * d.dist * sp.R, r: d.r * sp.R + 0.8, el: d.el, a };
+  });
+}
+
+function blobPath(sp) {
+  const pts = blobPoints(sp);
+  const N = pts.length;
+  const path = new Path2D();
   const mid = (a, b) => [(a[0] + b[0]) / 2, (a[1] + b[1]) / 2];
-  let m0 = mid(pts[N - 1], pts[0]);
+  const m0 = mid(pts[N - 1], pts[0]);
   path.moveTo(m0[0], m0[1]);
   for (let i = 0; i < N; i++) {
     const p = pts[i];
@@ -52,6 +66,59 @@ function blobPath(sp) {
   }
   path.closePath();
   return path;
+}
+
+// Everything the painters need to know about where the paint actually went, in canvas
+// coordinates: the outline (a union, if other wet splats ran into this one), the
+// droplets, and the center the decision is made from.
+export function splatShape(sp) {
+  const parts = [sp, ...(sp.merged || [])];
+  const center = sp.center || { x: sp.x, y: sp.y };
+  const outlines = parts.map((p) => blobPoints(p).map(([x, y]) => [x + p.x, y + p.y]));
+  let pts = outlines[0];
+  if (parts.length > 1) {
+    // Union by casting rays from the shared center and keeping the farthest paint on each.
+    const N = 96;
+    const best = new Array(N).fill(0);
+    for (const o of outlines) {
+      for (let i = 0; i < o.length; i++) {
+        const [ax, ay] = o[i];
+        const [bx, by] = o[(i + 1) % o.length];
+        for (let t = 0; t < 1; t += 0.25) {
+          const x = ax + (bx - ax) * t;
+          const y = ay + (by - ay) * t;
+          const bin = ((Math.round((Math.atan2(y - center.y, x - center.x) / TAU) * N) % N) + N) % N;
+          best[bin] = Math.max(best[bin], Math.hypot(x - center.x, y - center.y));
+        }
+      }
+    }
+    for (let i = 0; i < N; i++) {
+      if (best[i]) continue;
+      let a = 1;
+      let b = 1;
+      while (!best[(i - a + N) % N] && a < N) a++;
+      while (!best[(i + b) % N] && b < N) b++;
+      best[i] = (best[(i - a + N) % N] * b + best[(i + b) % N] * a) / (a + b);
+    }
+    pts = best.map((r, i) => [center.x + Math.cos((i / N) * TAU) * r, center.y + Math.sin((i / N) * TAU) * r]);
+  }
+  const R = sp.effR || sp.R;
+  const drops = [];
+  for (const p of parts) for (const d of dropPoints(p)) drops.push({ x: d.x + p.x, y: d.y + p.y, r: d.r });
+  for (const p of parts) {
+    for (const d of p.trail || []) if (Math.hypot(d.x - center.x, d.y - center.y) < R * 6) drops.push({ x: d.x, y: d.y, r: d.r });
+  }
+  let x0 = Infinity;
+  let y0 = Infinity;
+  let x1 = -Infinity;
+  let y1 = -Infinity;
+  for (const [x, y] of pts) {
+    x0 = Math.min(x0, x);
+    x1 = Math.max(x1, x);
+    y0 = Math.min(y0, y);
+    y1 = Math.max(y1, y);
+  }
+  return { pts, drops, cx: center.x, cy: center.y, box: { x: x0, y: y0, w: x1 - x0 || 1, h: y1 - y0 || 1 } };
 }
 
 // Renders the splat into its own small canvas, centered on its origin.
@@ -65,10 +132,7 @@ export function renderSplat(sp, k) {
   ctx.clearRect(-ext, -ext, ext * 2, ext * 2);
   const col = sp.pigment.rgb;
   const body = blobPath(sp);
-  const drops = sp.drops.map((d) => {
-    const a = sp.ang + d.th;
-    return { x: Math.cos(a) * d.dist * sp.R, y: Math.sin(a) * d.dist * sp.R, r: d.r * sp.R + 0.8, el: d.el, a };
-  });
+  const drops = dropPoints(sp);
   const dropPath = new Path2D();
   for (const d of drops) {
     dropPath.moveTo(d.x + Math.cos(d.a) * d.r * d.el, d.y + Math.sin(d.a) * d.r * d.el);

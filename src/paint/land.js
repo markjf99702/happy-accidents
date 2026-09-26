@@ -2,40 +2,74 @@
 import { TAU, rand, chance, clamp, lerp, smoothstep } from '../util.js';
 import { rgba, mix, jitter, darken, lighten, hex } from '../color.js';
 import { bristle, linePts, knife, tap, soft, pathOf, boundsOf, poly, grass } from '../brush.js';
+import { topEdge } from '../shape.js';
 
+// Land in the lake. The splat itself is laid down flat on the water and raised a little,
+// so its top edge becomes the hills. Near an edge it's joined to the shore; otherwise it's an island.
 export function bank(S, p) {
   const { W, H, hy, scheme } = S;
   const side = p.side ?? (p.x < W / 2 ? -1 : 1);
+  const connect = p.connect ?? true;
   const edgeX = side < 0 ? -30 : W + 30;
   const dT = clamp((p.y - hy) / (H - hy), 0, 1);
-  const far = dT < 0.45;
-  const reach = p.R * rand(1.2, 2.2) + 30 + dT * 90;
-  const tipX = clamp(p.x - side * reach, 30, W - 30);
-  const rise = rand(10, 28) * (0.4 + dT * 1.4);
-  const yEdge = p.y - rise;
-  const yTip = p.y + rand(2, 8) * (0.5 + dT);
+  const far = dT < 0.45 || !connect;
+  const shoreY = p.y + rand(2, 6) * (0.5 + dT);
 
-  // Top contour: from the canvas edge out to the tip, with a few soft hills.
-  const n = 40;
-  const hillF = rand(1.5, 3.5);
-  const hillPh = rand(TAU);
-  const hillA = rand(4, 14) * (0.4 + dT);
-  const top = [];
-  for (let i = 0; i <= n; i++) {
-    const t = i / n;
-    const x = lerp(edgeX, tipX, t);
-    const yb = lerp(yEdge, yTip, smoothstep(Math.pow(t, 1.4)));
-    const bump = Math.sin(t * Math.PI * hillF + hillPh) * hillA - Math.abs(Math.sin(t * Math.PI * hillF * 2.1 + hillPh)) * hillA * 0.3;
-    top.push([x, yb + bump * (1 - t)]);
+  let blob;
+  if (p.shape) {
+    const edge = topEdge(p.shape.pts, 36);
+    const refY = p.shape.cy + (p.shape.box.y + p.shape.box.h - p.shape.cy) * 0.25;
+    const sw = edge.x1 - edge.x0;
+    const f = clamp((110 + dT * 260) / sw, 1.4, 6);
+    const lift = f * (0.16 + dT * 0.24);
+    const bx0 = p.x - (p.shape.cx - edge.x0) * f;
+    const n = edge.ys.length - 1;
+    blob = edge.ys.map((yy, i) => {
+      const u = i / n;
+      const ease = smoothstep(clamp(Math.min(u, 1 - u) / 0.2, 0, 1));
+      return [bx0 + u * sw * f, shoreY - Math.max(0, refY - yy) * lift * ease];
+    });
+  } else {
+    const w = p.R * rand(3, 5) * (0.6 + dT);
+    blob = Array.from({ length: 24 }, (_, i) => [p.x - w / 2 + (i / 23) * w, shoreY - Math.sin((Math.PI * i) / 23) * p.R * (0.4 + dT)]);
   }
+  blob[0][1] = shoreY;
+  blob[blob.length - 1][1] = shoreY;
+  if (connect && side > 0) blob.reverse();
 
-  // Shoreline: flat for a far strip, curving down toward the viewer for a near bank.
+  const top = [];
+  if (connect) {
+    // Land running in from the edge of the canvas, meeting the splat at a low neck.
+    const rise = rand(10, 28) * (0.4 + dT * 1.4);
+    const yEdge = shoreY - rise - rand(0, 10) * (0.5 + dT);
+    const neckY = shoreY - rise * rand(0.35, 0.7);
+    const nearX = blob[0][0];
+    const n = 28;
+    const hillF = rand(1.5, 3.5);
+    const hillPh = rand(TAU);
+    const hillA = rand(4, 14) * (0.4 + dT);
+    for (let i = 0; i < n; i++) {
+      const t = i / n;
+      const bump = Math.sin(t * Math.PI * hillF + hillPh) * hillA - Math.abs(Math.sin(t * Math.PI * hillF * 2.1 + hillPh)) * hillA * 0.3;
+      top.push([lerp(edgeX, nearX, t), lerp(yEdge, neckY, smoothstep(t)) + bump * (1 - t)]);
+    }
+    blob.forEach(([x, y], i) => {
+      const u = i / (blob.length - 1);
+      top.push([x, u < 0.5 ? Math.min(y, lerp(neckY, shoreY, u * 2)) : y]);
+    });
+  } else {
+    top.push(...blob);
+  }
+  const tip = top[top.length - 1];
+
+  // Shoreline: flat for far land and islands, curving down toward the viewer for a near bank.
   const shore = [];
   if (far) {
-    const th = rand(0, 4) + dT * 10;
-    for (let i = n; i >= 0; i--) {
-      const t = i / n;
-      shore.push([lerp(edgeX, tipX, t), yTip + 1 + (1 - t) * th + rand(-0.8, 0.8)]);
+    const back = connect ? edgeX : top[0][0];
+    const th = connect ? rand(0, 4) + dT * 10 : 0;
+    for (let i = 0; i <= 40; i++) {
+      const t = i / 40;
+      shore.push([lerp(tip[0], back, t), shoreY + 1 + t * th + rand(-0.8, 0.8)]);
     }
   } else {
     // The shore swings out toward the viewer, then eases back, with a few small coves.
@@ -45,7 +79,7 @@ export function bank(S, p) {
       const u = i / 24;
       const swing = Math.sin(u * Math.PI * 0.85) * out * 0.7 + u * out * 0.3;
       const wob = Math.sin(u * 11 + cove) * 6 + Math.sin(u * 23 + cove * 2) * 3;
-      shore.push([tipX - side * (swing + wob), lerp(yTip, H + 20, Math.pow(u, 0.9))]);
+      shore.push([tip[0] - side * (swing + wob), lerp(tip[1], H + 20, Math.pow(u, 0.9))]);
     }
     shore.push([edgeX, H + 20]);
   }
@@ -66,7 +100,8 @@ export function bank(S, p) {
     ctx.fill(path);
   });
   // Contour strokes across the whole body of the land so it isn't a flat shape.
-  const depthSpan = far ? Math.max(10, yTip + 8 - yEdge) : H - yEdge;
+  const minTop = Math.min(...top.map((t) => t[1]));
+  const depthSpan = far ? Math.max(10, shoreY + 6 - minTop) : H - minTop;
   const passes = far ? 6 : 16;
   for (let k = 0; k < passes; k++) {
     ops.push((ctx) => {
@@ -168,8 +203,8 @@ export function bank(S, p) {
   const shoreBottom = far ? Math.max(...shore.map((s) => s[1])) + 10 + dT * 20 : H;
   b.h = Math.max(b.h, shoreBottom - b.y + 10);
   return {
-    kind: 'bank',
-    depth: Math.min(...top.map((t) => t[1])),
+    kind: connect ? 'bank' : 'island',
+    depth: minTop,
     reflect: false,
     bbox: b,
     ops,
@@ -209,6 +244,10 @@ export function cabin(S, p) {
   const roofLit = scheme.snow ? [255, 255, 255] : mix(roofC, scheme.mtn.light, 0.45);
   const glow = scheme.night || scheme.id === 'violet-dusk' || scheme.id === 'golden-hour';
   const lw = clamp(s / 60, 0.8, 2.6);
+  const wx0 = fx1 + back * 0.35;
+  const wx1 = fx1 + back * 0.6;
+  const win = mp([[wx0, by - wallH * 0.3], [wx0, by - wallH * 0.62], [wx1, by - wallH * 0.62 - rise * 0.5], [wx1, by - wallH * 0.3 - rise * 0.5]]);
+  const chim = [lerp(roof[0][0], roof[1][0], 0.72), lerp(roof[0][1], roof[1][1], 0.72)];
 
   const ops = [];
   ops.push((ctx) => {
@@ -255,9 +294,7 @@ export function cabin(S, p) {
     knife(ctx, e0[0], e0[1], m(apex[0]), apex[1] - 1, lw * 2, trim, 0.9, 0.2);
     knife(ctx, m(apex[0]), apex[1] - 1, e1[0], e1[1], lw * 2, trim, 0.9, 0.2);
     // chimney
-    const t = 0.72;
-    const chx = lerp(roof[0][0], roof[1][0], t);
-    const chy = lerp(roof[0][1], roof[1][1], t);
+    const [chx, chy] = chim;
     poly(ctx, [[chx - s * 0.035, chy + s * 0.04], [chx - s * 0.035, chy - s * 0.12], [chx + s * 0.035, chy - s * 0.12], [chx + s * 0.035, chy + s * 0.04]], darken(wood, 0.2));
     knife(ctx, chx + L * s * 0.02, chy - s * 0.12, chx + L * s * 0.02, chy + s * 0.02, lw * 1.2, lit, 0.7, 0.4);
     if (glow) {
@@ -273,12 +310,7 @@ export function cabin(S, p) {
     const dh = wallH * 0.62;
     poly(ctx, [[dx - dw / 2, by], [dx - dw / 2, by - dh], [dx + dw / 2, by - dh], [dx + dw / 2, by]], darken(wood, 0.55));
     // window on the side wall
-    const wx0 = fx1 + back * 0.35;
-    const wx1 = fx1 + back * 0.6;
-    const yA = by - wallH * 0.62;
-    const yB = by - wallH * 0.3;
-    const win = mp([[wx0, yB], [wx0, yA], [wx1, yA - rise * 0.5], [wx1, yB - rise * 0.5]]);
-    if (glow) soft(ctx, m((wx0 + wx1) / 2), (yA + yB) / 2, s * 0.25, scheme.window, 0.35);
+    if (glow) soft(ctx, m((wx0 + wx1) / 2), by - wallH * 0.46, s * 0.25, scheme.window, 0.35);
     poly(ctx, win, glow ? scheme.window : darken(wood, 0.6));
     ctx.strokeStyle = rgba(lit, 0.8);
     ctx.lineWidth = lw;
@@ -308,5 +340,7 @@ export function cabin(S, p) {
   const all = front.concat(sideWall, roof);
   const b = boundsOf(all, s * 0.3);
   b.h += s * 0.2;
-  return { kind: 'cabin', depth: by, reflect: false, bbox: b, ops, dur: 2000, meta: { x: cx, baseY: by, size: s } };
+  const x0 = Math.min(m(fx0), m(fx1 + back));
+  const x1 = Math.max(m(fx0), m(fx1 + back));
+  return { kind: 'cabin', depth: by, reflect: false, bbox: b, ops, dur: 2000, meta: { x: cx, baseY: by, size: s, roof, win, chim, glow, x0, x1, lit } };
 }

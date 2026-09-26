@@ -3,6 +3,7 @@
 import { TAU, rand, randi, chance, clamp, gauss } from '../util.js';
 import { rgba, mix, jitter, darken, lighten, ramp, hex } from '../color.js';
 import { bristle, linePts, soft, scrub } from '../brush.js';
+import { place, placeDrops, clumps } from '../shape.js';
 
 export function sky(S) {
   const { W, hy, scheme } = S;
@@ -152,8 +153,8 @@ export function cloud(S, p) {
   const ops = [];
   const depth = -800 + (1 - y / hy) * 50;
 
-  if (p.elong > 1.9 || chance(0.18)) {
-    // A long, thin streak of cloud.
+  if (p.elong > 2.3 || (!p.shape && chance(0.18))) {
+    // A long flick leaves a long, thin streak of cloud.
     const h = w * rand(0.05, 0.1);
     ops.push((ctx) => {
       ctx.save();
@@ -178,23 +179,66 @@ export function cloud(S, p) {
         }
       });
     }
-    return { kind: 'cloud', depth, reflect: true, bbox: { x: x - w / 2 - 30, y: y - h * 3, w: w + 60, h: h * 6 }, ops, dur: 1300 };
+    const puffs = [-0.3, 0, 0.3].map((f) => ({ x: x + f * w, y, r: Math.max(h * 2, 12) }));
+    return {
+      kind: 'cloud',
+      depth,
+      reflect: true,
+      bbox: { x: x - w / 2 - 30, y: y - h * 3, w: w + 60, h: h * 6 },
+      ops,
+      dur: 1300,
+      meta: { puffs, baseY: y + h, h: h * 2, w, x, y, light, shadow },
+    };
   }
 
   // A cumulus built from puffs.
-  const h = w * rand(0.26, 0.4);
-  const baseY = y + h * 0.3;
-  const n = randi(4, 7);
-  const puffs = [];
-  for (let i = 0; i < n; i++) {
-    const t = i / (n - 1);
-    const pr = h * (0.3 + 0.5 * Math.sin(Math.PI * (0.15 + 0.7 * t))) * rand(0.75, 1.15);
-    puffs.push({ x: x - w / 2 + w * (0.1 + 0.8 * t) + rand(-w * 0.04, w * 0.04), y: baseY - pr * rand(0.55, 0.85), r: pr });
-  }
-  const extra = randi(1, 3);
-  for (let i = 0; i < extra; i++) {
-    const q = puffs[randi(1, n - 2)];
-    puffs.push({ x: q.x + rand(-q.r * 0.5, q.r * 0.5), y: q.y - q.r * rand(0.35, 0.65), r: q.r * rand(0.5, 0.8) });
+  let h;
+  let baseY;
+  let puffs;
+  if (p.shape) {
+    // The cloud is the splat's own silhouette, blown up and flattened a little underneath.
+    const f = w / p.shape.box.w;
+    const fy = Math.min(f * 0.62, (w * 0.5) / p.shape.box.h);
+    const poly = place(p.shape, x, y, f, fy);
+    let top = Infinity;
+    let bottom = -Infinity;
+    let left = Infinity;
+    let right = -Infinity;
+    for (const [px, py] of poly) {
+      top = Math.min(top, py);
+      bottom = Math.max(bottom, py);
+      left = Math.min(left, px);
+      right = Math.max(right, px);
+    }
+    baseY = y + (bottom - y) * 0.45;
+    h = Math.max(24, baseY - top);
+    const flat = poly.map(([px, py]) => [px, Math.min(py, baseY)]);
+    puffs = clumps(flat, x, (top + baseY) / 2, h * 0.5, 4).map((pf) => ({ ...pf, y: Math.min(pf.y, baseY - pf.r * 0.4) }));
+    for (let k = 0; k < 4; k++) puffs.push({ x: left + ((right - left) * (k + 0.5)) / 4, y: (top + baseY) / 2 + h * 0.1, r: h * 0.38 });
+    // Droplets that flew off become little cloudlets drifting alongside.
+    const bits = placeDrops(p.shape, x, y, f * 0.55, fy * 0.55)
+      .filter((d) => d.y < hy - 20)
+      .sort((a, b) => b.r - a.r)
+      .slice(0, 4);
+    for (const d of bits) {
+      const r = clamp(d.r * 2.2, 10, h * 0.35);
+      puffs.push({ x: d.x, y: d.y, r }, { x: d.x + r * 0.9, y: d.y + r * 0.2, r: r * 0.7 });
+    }
+  } else {
+    h = w * rand(0.26, 0.4);
+    baseY = y + h * 0.3;
+    const n = randi(4, 7);
+    puffs = [];
+    for (let i = 0; i < n; i++) {
+      const t = i / (n - 1);
+      const pr = h * (0.3 + 0.5 * Math.sin(Math.PI * (0.15 + 0.7 * t))) * rand(0.75, 1.15);
+      puffs.push({ x: x - w / 2 + w * (0.1 + 0.8 * t) + rand(-w * 0.04, w * 0.04), y: baseY - pr * rand(0.55, 0.85), r: pr });
+    }
+    const extra = randi(1, 3);
+    for (let i = 0; i < extra; i++) {
+      const q = puffs[randi(1, n - 2)];
+      puffs.push({ x: q.x + rand(-q.r * 0.5, q.r * 0.5), y: q.y - q.r * rand(0.35, 0.65), r: q.r * rand(0.5, 0.8) });
+    }
   }
   const la = -Math.PI / 2 + S.lightDir * (Math.PI / 4);
 
@@ -274,19 +318,37 @@ export function cloud(S, p) {
   x0 = Math.min(x0, x - w * 0.45);
   x1 = Math.max(x1, x + w * 0.45);
   y1 = Math.max(y1, baseY + h * 0.2);
-  return { kind: 'cloud', depth, reflect: true, bbox: { x: x0, y: y0, w: x1 - x0, h: y1 - y0 }, ops, dur: 1700 };
+  return {
+    kind: 'cloud',
+    depth,
+    reflect: true,
+    bbox: { x: x0, y: y0, w: x1 - x0, h: y1 - y0 },
+    ops,
+    dur: 1700,
+    meta: { puffs, baseY, h, w, x, y, light, shadow },
+  };
 }
 
 export function birds(S, p) {
-  const n = randi(2, 5);
   const col = S.scheme.bird;
   const scale = clamp(p.R / 12, 0.7, 1.4) * (0.6 + 0.6 * (1 - p.y / S.hy));
-  const list = Array.from({ length: n }, () => ({
-    x: p.x + rand(-60, 60) * scale,
-    y: p.y + rand(-25, 25) * scale,
-    s: rand(5, 11) * scale,
-    tilt: rand(-0.25, 0.25),
-  }));
+  // Every droplet that flew off the brush becomes a bird, if there were enough of them.
+  const drops = [];
+  for (const d of p.shape?.drops || []) {
+    if (d.y < S.hy - 12 && drops.every((o) => Math.hypot(o.x - d.x, o.y - d.y) > 9)) drops.push(d);
+  }
+  let list;
+  if (drops.length >= 2) {
+    list = drops.slice(0, 7).map((d) => ({ x: d.x, y: d.y, s: clamp(d.r * 2.4, 4, 12) * scale, tilt: rand(-0.25, 0.25) }));
+    list.push({ x: p.x, y: p.y, s: clamp(p.R * 0.6, 6, 13) * scale, tilt: rand(-0.2, 0.2) });
+  } else {
+    list = Array.from({ length: randi(2, 5) }, () => ({
+      x: p.x + rand(-60, 60) * scale,
+      y: p.y + rand(-25, 25) * scale,
+      s: rand(5, 11) * scale,
+      tilt: rand(-0.25, 0.25),
+    }));
+  }
   const ops = list.map((b) => (ctx) => {
     ctx.strokeStyle = rgba(col, 0.9);
     ctx.lineCap = 'round';
@@ -299,16 +361,21 @@ export function birds(S, p) {
       ctx.stroke();
     }
   });
-  const pad = 80 * scale;
-  return { kind: 'birds', depth: -700, reflect: true, bbox: { x: p.x - pad, y: p.y - pad * 0.6, w: pad * 2, h: pad * 1.2 }, ops, dur: 700 };
+  const xs = list.map((b) => b.x);
+  const ys = list.map((b) => b.y);
+  const pad = 16 * scale;
+  const bx = Math.min(...xs) - pad;
+  const by = Math.min(...ys) - pad;
+  return { kind: 'birds', depth: -700, reflect: true, bbox: { x: bx, y: by, w: Math.max(...xs) + pad - bx, h: Math.max(...ys) + pad - by }, ops, dur: 700 };
 }
 
 export function stars(S, p) {
-  const n = randi(10, 24);
-  const spread = clamp(p.R * 5, 60, 200);
   const col = S.scheme.sun;
-  const list = Array.from({ length: n }, () => ({ x: p.x + gauss() * spread * 0.5, y: p.y + gauss() * spread * 0.35, r: rand(0.5, 1.6) }));
-  list[0].r = 2.2;
+  // The splat is the bright one; every droplet around it is another star.
+  const list = [{ x: p.x, y: p.y, r: 2.3 }];
+  for (const d of p.shape?.drops || []) if (d.y < S.hy - 8) list.push({ x: d.x, y: d.y, r: clamp(d.r * 0.45, 0.5, 1.7) });
+  const spread = clamp(p.R * 5, 60, 200);
+  for (let i = 0; i < 6; i++) list.push({ x: p.x + gauss() * spread * 0.5, y: Math.min(S.hy - 10, p.y + gauss() * spread * 0.35), r: rand(0.4, 0.9) });
   const ops = [];
   for (let i = 0; i < list.length; i += 3) {
     const chunk = list.slice(i, i + 3);
@@ -332,7 +399,11 @@ export function stars(S, p) {
       }
     });
   }
-  return { kind: 'stars', depth: -950, reflect: true, bbox: { x: p.x - spread * 1.6, y: p.y - spread * 1.2, w: spread * 3.2, h: spread * 2.4 }, ops, dur: 900 };
+  const xs = list.map((st) => st.x);
+  const ys = list.map((st) => st.y);
+  const bx = Math.min(...xs) - 16;
+  const by = Math.min(...ys) - 16;
+  return { kind: 'stars', depth: -950, reflect: true, bbox: { x: bx, y: by, w: Math.max(...xs) + 16 - bx, h: Math.max(...ys) + 16 - by }, ops, dur: 900 };
 }
 
 export function aurora(S, p) {

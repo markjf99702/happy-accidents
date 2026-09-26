@@ -12,6 +12,12 @@ import { line, toolInfo } from './words.js';
 export const W = 1200;
 export const H = 900;
 
+// Things that change when paint lands on them.
+const REACTIVE = new Set(['evergreen', 'deciduous', 'bush', 'mountain', 'sun', 'moon', 'cloud', 'cabin', 'rock']);
+
+// Things a splat can land on without touching them: the sky itself, light, weather and small marks.
+const SEE_THROUGH = new Set(['sky', 'sunpath', 'signature', 'mist', 'aurora', 'stars', 'birds', 'ripples', 'rain', 'foothills', 'waterfall', 'flowers']);
+
 export class Studio {
   constructor(canvas, hooks = {}) {
     this.canvas = canvas;
@@ -26,7 +32,10 @@ export class Studio {
     this.mask.width = W / 4;
     this.mask.height = H / 4;
     this.mctx = this.mask.getContext('2d', { willReadFrequently: true });
-    this.probe = document.createElement('canvas').getContext('2d');
+    const pix = document.createElement('canvas');
+    pix.width = 1;
+    pix.height = 1;
+    this.pix = pix.getContext('2d', { willReadFrequently: true });
     this.paper = this.makePaper();
     this.weave = this.ctx.createPattern(this.makeWeave(), 'repeat');
     this.number = 0;
@@ -166,12 +175,48 @@ export class Studio {
     m.restore();
   }
 
-  mountainAt(x, y) {
+  // What's painted at a point: the frontmost element whose paint is actually there.
+  // Samples a small ring as well as the center, so a splat on a thin-needled tree still counts.
+  elementAt(x, y, r = 0) {
+    const pts = [[x, y]];
+    for (let i = 0; i < 6; i++) pts.push([x + Math.cos((i / 6) * TAU) * r * 0.5, y + Math.sin((i / 6) * TAU) * r * 0.5]);
+    const tally = new Map();
+    pts.forEach(([px, py], i) => {
+      const el = this.topAt(px, py);
+      if (el) tally.set(el, (tally.get(el) || 0) + (i ? 1 : 2.5));
+    });
+    let best = null;
+    let most = 0;
+    for (const [el, n] of tally) {
+      if (n > most) {
+        best = el;
+        most = n;
+      }
+    }
+    return best;
+  }
+
+  topAt(x, y) {
     for (let i = this.elements.length - 1; i >= 0; i--) {
       const el = this.elements[i];
-      if (el.kind === 'mountain' && el.meta?.path && this.probe.isPointInPath(el.meta.path, x, y)) return el;
+      if (SEE_THROUGH.has(el.kind)) continue;
+      if (el.depth < 0 && y > this.hy) continue;
+      const b = el.bbox;
+      if (x < b.x || y < b.y || x >= b.x + b.w || y >= b.y + b.h) continue;
+      if (el.kind === 'sun' || el.kind === 'moon') {
+        if (Math.hypot(x - el.meta.x, y - el.meta.y) <= el.meta.r * 1.3) return el;
+        continue;
+      }
+      if (this.alphaAt(el, x, y) > 90) return el;
     }
     return null;
+  }
+
+  alphaAt(el, x, y) {
+    const p = this.pix;
+    p.clearRect(0, 0, 1, 1);
+    p.drawImage(el.canvas, Math.floor((x - el.bbox.x) * this.k), Math.floor((y - el.bbox.y) * this.k), 1, 1, 0, 0, 1, 1);
+    return p.getImageData(0, 0, 1, 1).data[3];
   }
 
   findLand() {
@@ -216,6 +261,29 @@ export class Studio {
     return el;
   }
 
+  // Paint more into an element that's already on the canvas (snow on a tree, a sunset in the sky).
+  paintOnto(target, spec) {
+    const el = {
+      kind: spec.kind,
+      ops: spec.ops,
+      ctx: target.ctx,
+      canvas: target.canvas,
+      bbox: target.bbox,
+      depth: target.depth,
+      reflect: target.reflect,
+      i: 0,
+      t0: performance.now(),
+      dur: spec.dur ?? 1200,
+      done: false,
+    };
+    this.active.push(el);
+    this.counts[spec.kind] = (this.counts[spec.kind] || 0) + 1;
+    if (target.reflect) this.reflDirty = true;
+    this.hooks.onBrush?.(spec.kind, el.dur);
+    this.kick();
+    return el;
+  }
+
   clampBox({ x, y, w, h }) {
     const x0 = Math.max(0, Math.floor(x));
     const y0 = Math.max(0, Math.floor(y));
@@ -230,19 +298,52 @@ export class Studio {
     const x = clamp(spec.x, 0, W);
     const y = clamp(spec.y, 0, H);
     const sp = makeSplat({ ...spec, x, y });
-    sp.gen = this.gen;
     renderSplat(sp, this.k);
-    sp.state = 'wet';
-    this.splats.push(sp);
-    this.accidents += 1;
-    this.hooks.onSplat?.(sp);
-    setTimeout(() => this.resolve(sp), spec.delay ?? rand(450, 850));
-    this.kick();
+    this.land(sp, spec.delay ?? rand(450, 850));
     return sp;
   }
 
+  // A splat hits the canvas. If it lands in paint that's still wet, the two run together.
+  land(sp, delay) {
+    sp.gen = this.gen;
+    const wet = this.splats.find(
+      (s) => s.state === 'wet' && s.gen === this.gen && Math.hypot(s.x - sp.x, s.y - sp.y) < (s.R * s.stretch + sp.R * sp.stretch) * 0.7,
+    );
+    this.splats.push(sp);
+    this.accidents += 1;
+    this.hooks.onSplat?.(sp);
+    if (wet) this.merge(wet, sp);
+    else {
+      sp.state = 'wet';
+      sp.timer = setTimeout(() => this.resolve(sp), delay);
+    }
+    this.kick();
+  }
+
+  merge(a, b) {
+    b.state = 'merged';
+    b.parent = a;
+    a.merged = [...(a.merged || []), b];
+    const parts = [a, ...a.merged];
+    const areas = parts.map((p) => p.R * p.R * p.stretch);
+    const total = areas.reduce((s, v) => s + v, 0);
+    a.center = {
+      x: parts.reduce((s, p, i) => s + p.x * areas[i], 0) / total,
+      y: parts.reduce((s, p, i) => s + p.y * areas[i], 0) / total,
+    };
+    a.effR = Math.sqrt(parts.reduce((s, p) => s + p.R * p.R, 0));
+    // The colors run together too.
+    const rgb = [0, 1, 2].map((c) => parts.reduce((s, p, i) => s + p.pigment.rgb[c] * areas[i], 0) / total);
+    const main = parts[areas.indexOf(Math.max(...areas))].pigment;
+    const names = [...new Set(parts.map((p) => p.pigment.name))];
+    a.mixPigment = { ...main, name: names.join(' and '), rgb };
+    clearTimeout(a.timer);
+    a.timer = setTimeout(() => this.resolve(a), rand(500, 800));
+    this.say('merge', 'merge');
+  }
+
   resolve(sp) {
-    if (sp.gen !== this.gen) return;
+    if (sp.gen !== this.gen || sp.state !== 'wet') return;
     let plan = [];
     try {
       plan = decide(this, sp);
@@ -272,8 +373,8 @@ export class Studio {
       return;
     }
     st.spec = spec;
-    if (!st.quiet) this.say(st.say ?? st.kind, spec.kind, sp.pigment);
-    const el = this.addElement(spec);
+    if (!st.quiet) this.say(st.say ?? st.kind, spec.kind, sp.mixPigment || sp.pigment);
+    const el = spec.onto ? this.paintOnto(spec.onto, spec) : this.addElement(spec);
     el.onProgress = (t) => {
       sp.alpha = Math.min(sp.alpha, 1 - clamp(((i + t) / plan.length) * 1.4, 0, 1));
     };
@@ -299,13 +400,7 @@ export class Studio {
     const sp = this.pool;
     if (!sp) return null;
     this.pool = null;
-    sp.gen = this.gen;
-    sp.state = 'wet';
-    this.splats.push(sp);
-    this.accidents += 1;
-    this.hooks.onSplat?.(sp);
-    setTimeout(() => this.resolve(sp), rand(350, 650));
-    this.kick();
+    this.land(sp, rand(350, 650));
     return sp;
   }
 
@@ -323,24 +418,52 @@ export class Studio {
 
   // An accident nobody asked for. hint nudges it toward something the painting could use.
   randomAccident(opts = {}) {
+    const ang = rand(TAU);
+    const speed = chance(0.5) ? rand(0.2, 1.6) : 0;
+    const pigment = opts.pigment ?? pick(PIGMENTS);
+    const base = { vx: Math.cos(ang) * speed, vy: Math.sin(ang) * speed, pigment, delay: opts.delay };
+
+    // Now and then, land right on something that's already painted and see what it does to it.
+    const targets = this.elements.filter((e) => REACTIVE.has(e.kind));
+    if (!opts.hint && targets.length > 2 && chance(0.28)) {
+      const t = pick(targets);
+      const spot = this.spotOn(t);
+      if (spot) return this.addSplat({ ...base, ...spot });
+    }
+
     let hint = opts.hint ?? this.pickHint();
-    let spot = this.spotFor(hint);
+    let spot = null;
+    // Otherwise look for open space, so the painting keeps growing.
+    for (let i = 0; i < 8 && !spot; i++) {
+      const s = this.spotFor(hint);
+      if (s && (i === 7 || !this.elementAt(s.x, s.y, s.R))) spot = s;
+    }
     if (!spot) {
       hint = 'cloud';
       spot = this.spotFor(hint);
     }
-    const ang = rand(TAU);
-    const speed = chance(0.5) ? rand(0.2, 1.6) : 0;
-    return this.addSplat({
-      x: spot.x,
-      y: spot.y,
-      R: spot.R,
-      vx: Math.cos(ang) * speed,
-      vy: Math.sin(ang) * speed,
-      pigment: opts.pigment ?? pick(PIGMENTS),
-      hint,
-      delay: opts.delay,
-    });
+    return this.addSplat({ ...base, ...spot, hint });
+  }
+
+  // A point that's actually on an element.
+  spotOn(t) {
+    const m = t.meta;
+    if (!m) return null;
+    switch (t.kind) {
+      case 'mountain':
+        return { x: m.peak[0] + rand(-40, 40), y: m.peak[1] + m.hgt * rand(0.15, 0.4), R: rand(16, 30) };
+      case 'sun':
+      case 'moon':
+        return { x: m.x, y: m.y, R: rand(14, 22) };
+      case 'cloud':
+        return { x: m.x + rand(-0.2, 0.2) * m.w, y: m.baseY - m.h * 0.4, R: rand(16, 26) };
+      case 'cabin':
+        return { x: (m.x0 + m.x1) / 2, y: m.baseY - m.size * 0.2, R: rand(14, 22) };
+      case 'rock':
+        return { x: m.x, y: m.y - m.hh * 0.5, R: rand(12, 18) };
+      default:
+        return m.baseY ? { x: m.x, y: m.baseY - m.size * rand(0.35, 0.6), R: rand(14, 24) } : null;
+    }
   }
 
   pickHint() {
@@ -458,7 +581,10 @@ export class Studio {
 
     const dt = Math.min(64, now - (this.lastFrame ?? now));
     this.lastFrame = now;
-    for (const s of this.splats) if (s.state === 'fading') s.alpha -= dt / 350;
+    for (const s of this.splats) {
+      if (s.state === 'fading') s.alpha -= dt / 350;
+      else if (s.parent) s.alpha = s.parent.alpha;
+    }
     this.splats = this.splats.filter((s) => s.alpha > 0.01);
 
     if (this.pool) {

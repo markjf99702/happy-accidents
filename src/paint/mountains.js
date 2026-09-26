@@ -2,6 +2,7 @@
 import { rand, randi, chance, clamp } from '../util.js';
 import { rgba, mix, jitter, darken } from '../color.js';
 import { bristle, linePts, knife, pathOf, mistAtop } from '../brush.js';
+import { topEdge, heights, at } from '../shape.js';
 
 // Midpoint displacement between two points, vertical jitter only.
 function ridgeLine(a, b, amp, levels) {
@@ -29,15 +30,41 @@ export function mountain(S, p) {
   const base = hy + 10;
   const peakY = clamp(p.y, hy * 0.1, hy - 40);
   const hgt = base - peakY;
-  const halfL = clamp(hgt * rand(1.3, 2.3) + p.R, 120, W * 0.6);
-  const halfR = clamp(hgt * rand(1.3, 2.3) + p.R, 120, W * 0.6);
-  const px = p.x;
-  const left = ridgeLine([px - halfL, base], [px, peakY], hgt * 0.24, 6);
-  const right = ridgeLine([px, peakY], [px + halfR, base], hgt * 0.24, 6);
-  const peakIndex = left.length - 1;
-  const ridge = left.concat(right.slice(1)).map(([x, y], i, arr) =>
-    i === 0 || i === arr.length - 1 || i === peakIndex ? [x, y] : [x, clamp(y, peakY + 3, base)],
-  );
+  let ridge;
+  let peakIndex;
+  if (p.shape) {
+    // The summit is the top edge of the splat, blown up and sharpened; the flanks run down to the water.
+    const edge = topEdge(p.shape.pts, 40);
+    const hs = heights(edge, p.shape.cy).map((v) => Math.pow(v, 1.5));
+    const iPeak = hs.indexOf(Math.max(...hs));
+    const peakU = iPeak / (hs.length - 1);
+    const highX = edge.x0 + peakU * (edge.x1 - edge.x0);
+    const summitW = clamp((edge.x1 - edge.x0) * rand(2.4, 3.4), 90, W * 0.55);
+    const summitDepth = hgt * rand(0.35, 0.5);
+    const sx0 = highX - peakU * summitW;
+    const summit = hs.map((v, i) => [sx0 + (i / (hs.length - 1)) * summitW, peakY + (1 - v) * summitDepth + (i === iPeak ? 0 : rand(-1, 1) * hgt * 0.012)]);
+    // Keep the splat's lumps, but no rock face steeper than about 65 degrees.
+    const dx = summitW / (hs.length - 1);
+    for (let i = iPeak - 1; i >= 0; i--) summit[i][1] = Math.min(summit[i][1], summit[i + 1][1] + dx * 2.1);
+    for (let i = iPeak + 1; i < summit.length; i++) summit[i][1] = Math.min(summit[i][1], summit[i - 1][1] + dx * 2.1);
+    const skL = clamp(hgt * rand(0.9, 1.6), 80, W * 0.4);
+    const skR = clamp(hgt * rand(0.9, 1.6), 80, W * 0.4);
+    const left = ridgeLine([sx0 - skL, base], summit[0], hgt * 0.12, 5);
+    const right = ridgeLine(summit[summit.length - 1], [sx0 + summitW + skR, base], hgt * 0.12, 5);
+    ridge = left.concat(summit.slice(1), right.slice(1));
+    peakIndex = left.length - 1 + iPeak;
+  } else {
+    const hl = clamp(hgt * rand(1.3, 2.3) + p.R, 120, W * 0.6);
+    const hr = clamp(hgt * rand(1.3, 2.3) + p.R, 120, W * 0.6);
+    const left = ridgeLine([p.x - hl, base], [p.x, peakY], hgt * 0.24, 6);
+    const right = ridgeLine([p.x, peakY], [p.x + hr, base], hgt * 0.24, 6);
+    ridge = left.concat(right.slice(1));
+    peakIndex = left.length - 1;
+  }
+  ridge = ridge.map(([x, y], i, arr) => (i === 0 || i === arr.length - 1 || i === peakIndex ? [x, y] : [x, clamp(y, peakY + 3, base)]));
+  const px = ridge[peakIndex][0];
+  const halfL = px - ridge[0][0];
+  const halfR = ridge[ridge.length - 1][0] - px;
   const outline = ridge.concat([[px + halfR, base + 14], [px - halfL, base + 14]]);
   const path = pathOf(outline);
 
@@ -171,7 +198,7 @@ export function mountain(S, p) {
     bbox: box,
     ops,
     dur: 2300,
-    meta: { path, peak: [px, peakY] },
+    meta: { path, peak: [px, peakY], ridge, base, hgt, snowLine, box, c0 },
   };
 }
 
@@ -180,7 +207,8 @@ export function treeline(S, p) {
   const { scheme } = S;
   const scale = p.scale ?? 1;
   const baseY = p.baseY ?? S.hy + rand(3, 7);
-  const w = clamp(p.R * rand(6, 10) * scale, 120, 640);
+  // A clump on a mountainside is small and follows the slope; a treeline is long and level.
+  const w = p.slope !== undefined ? clamp(p.R * rand(2.5, 4), 50, 200) : clamp(p.R * rand(6, 10) * scale, 120, 640);
   const x0 = p.x - w / 2;
   const x1 = p.x + w / 2;
   const hz = p.haze ?? 0.4;
@@ -189,12 +217,17 @@ export function treeline(S, p) {
   const ground = mix(scheme.ground.dark, S.haze, hz);
   const maxH = clamp(p.R * 0.9, 14, 40) * scale;
 
+  // The forest's skyline is the top edge of the splat.
+  const sky = p.shape ? heights(topEdge(p.shape.pts, 32), p.shape.cy + p.shape.box.h * 0.2) : null;
   const trees = [];
   for (let x = x0; x < x1; x += rand(2.5, 6) * Math.max(0.6, scale)) {
     const t = (x - x0) / w;
-    const env = Math.pow(Math.sin(Math.PI * t), 0.6);
-    trees.push({ x, h: maxH * env * rand(0.35, 1) + 2 });
+    const env = sky ? 0.2 + 0.8 * at(sky, t) : Math.pow(Math.sin(Math.PI * t), 0.6);
+    const dy = p.slope !== undefined ? (x - p.x) * p.slope + rand(-1, 1) * maxH * 0.5 : 0;
+    trees.push({ x, h: maxH * env * rand(sky ? 0.6 : 0.35, 1) + 2, dy });
   }
+  const lo = Math.min(...trees.map((t) => t.dy));
+  const hi = Math.max(...trees.map((t) => t.dy));
 
   const ops = [];
   if (!p.noGround) {
@@ -214,17 +247,18 @@ export function treeline(S, p) {
     ops.push((ctx) => {
       ctx.lineCap = 'round';
       for (const tr of chunk) {
-        const top = baseY - tr.h;
+        const foot = baseY + tr.dy;
+        const top = foot - tr.h;
         ctx.strokeStyle = rgba(jitter(c, 0.03), 0.9);
         ctx.lineWidth = 1;
         ctx.beginPath();
-        for (let yy = top; yy < baseY; yy += 1.6) {
+        for (let yy = top; yy < foot; yy += 1.6) {
           const half = ((yy - top) / tr.h) * tr.h * 0.28 * rand(0.6, 1.3);
           ctx.moveTo(tr.x - half, yy + rand(-0.6, 0.6));
           ctx.lineTo(tr.x + half, yy + rand(-0.6, 0.6));
         }
         ctx.moveTo(tr.x, top - 1);
-        ctx.lineTo(tr.x, baseY);
+        ctx.lineTo(tr.x, foot);
         ctx.stroke();
       }
     });
@@ -233,11 +267,11 @@ export function treeline(S, p) {
     ctx.lineCap = 'round';
     for (const tr of trees) {
       if (!chance(0.35)) continue;
-      const top = baseY - tr.h;
+      const top = baseY + tr.dy - tr.h;
       ctx.strokeStyle = rgba(cl, 0.45);
       ctx.lineWidth = 0.9;
       ctx.beginPath();
-      for (let yy = top + tr.h * 0.2; yy < baseY - 2; yy += 3) {
+      for (let yy = top + tr.h * 0.2; yy < baseY + tr.dy - 2; yy += 3) {
         const half = ((yy - top) / tr.h) * tr.h * 0.25;
         ctx.moveTo(tr.x + S.lightDir * half * 0.2, yy);
         ctx.lineTo(tr.x + S.lightDir * half, yy + 0.5);
@@ -245,8 +279,8 @@ export function treeline(S, p) {
       ctx.stroke();
     }
   });
-  const box = { x: x0 - 14, y: baseY - maxH - 6, w: w + 28, h: maxH + 16 };
-  ops.push((ctx) => mistAtop(ctx, box, baseY - maxH * 0.7, baseY + 2, S.haze, 0, 0.7));
+  const box = { x: x0 - 14, y: baseY + lo - maxH - 6, w: w + 28, h: maxH + hi - lo + 16 };
+  ops.push((ctx) => mistAtop(ctx, box, baseY + lo - maxH * 0.7, baseY + hi + 2, S.haze, 0, 0.7));
 
   return {
     kind: p.kind ?? 'treeline',
