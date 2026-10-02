@@ -113,7 +113,7 @@ test('the offline copy lists every file the page needs', async () => {
     }
     return out;
   };
-  const needed = [...(await walk('src')), ...(await walk('fonts')), 'styles.css', 'index.html', 'icon.svg', 'manifest.webmanifest'];
+  const needed = [...(await walk('src')), ...(await walk('fonts')), 'styles.css', 'index.html', 'carry.js', 'icon.svg', 'manifest.webmanifest'];
   for (const f of needed) assert.ok(listed.has(f), `sw.js doesn't list ${f}`);
   for (const f of listed) assert.ok(needed.includes(f), `sw.js lists ${f}, which doesn't exist`);
 });

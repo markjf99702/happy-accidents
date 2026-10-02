@@ -1,6 +1,6 @@
 # Happy Accidents
 
-**Play it: [junkdrawer.works/happy-accidents](https://junkdrawer.works/happy-accidents/)**
+**Play it: [happy-accidents.junkdrawer.works](https://happy-accidents.junkdrawer.works/)**
 
 **A painting toy where you can't paint on purpose.** You flick, tap or pour paint at a canvas on an easel. After a beat, a gentle painter decides what each splat was trying to be and paints it in, stroke by stroke, in the splat's own color and shape. Paint that lands on something already there changes it. There's no undo.
 
