@@ -134,6 +134,46 @@ await page.waitForTimeout(200);
 await settle();
 assert.equal(await S(() => window.happyAccidents.counts.snowfall), 1, 'white paint on a mountain made fresh snow');
 
+// A tree with no ground beside it (on an island, or at the tip of a bank) can't get company. Paint that isn't white or
+// warm catches the light on it instead, just once, and the painter doesn't say a friend showed up.
+await S(() => window.happyAccidents.newCanvas('golden-hour'));
+await settle();
+await S(async () => {
+  const { PIGMENTS } = await import('./src/schemes.js');
+  const st = window.happyAccidents;
+  st.addSplat({ x: st.W * 0.5, y: st.hy + (st.H - st.hy) * 0.5, R: 40, pigment: PIGMENTS.find((p) => p.id === 'sap-green'), hint: 'tree', delay: 50 });
+});
+await page.waitForTimeout(200);
+await settle();
+await S(() => {
+  const st = window.happyAccidents;
+  st.mctx.clearRect(0, 0, st.mask.width, st.mask.height); // no ground anywhere beside the island's tree now
+  window.said = [];
+  const narrate = st.hooks.onNarrate;
+  st.hooks.onNarrate = (n) => {
+    window.said.push(n.line);
+    narrate(n);
+  };
+});
+for (let i = 0; i < 2; i++) {
+  await S(async () => {
+    const { PIGMENTS } = await import('./src/schemes.js');
+    const st = window.happyAccidents;
+    const tree = st.elements.find((e) => ['evergreen', 'deciduous', 'bush'].includes(e.kind));
+    let spot = st.spotOn(tree);
+    for (let k = 0; k < 30 && st.elementAt(spot.x, spot.y, spot.R) !== tree; k++) spot = st.spotOn(tree);
+    st.addSplat({ ...spot, pigment: PIGMENTS.find((p) => p.id === 'phthalo-blue'), delay: 50 });
+  });
+  await page.waitForTimeout(200);
+  await settle();
+}
+const lonely = await S(async () => {
+  const { LINES } = await import('./src/words.js');
+  return { glows: window.happyAccidents.counts.treeGlow || 0, company: window.said.filter((l) => LINES.company.includes(l)) };
+});
+assert.deepEqual(lonely.company, [], 'the painter said a tree got company, but no friend grew');
+assert.equal(lonely.glows, 1, `light caught a tree with no ground beside it once, not again and again (${lonely.glows})`);
+
 // The paint's color decides what a splat becomes. Each check starts on a clean canvas and reports what got painted.
 // where: { sky: 0..1 } is from the top of the canvas down to the horizon; { lake: 0..1 } from the horizon down;
 // 'land' is a spot on a bank of Sap Green land laid down first.

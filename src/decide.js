@@ -70,11 +70,17 @@ function react(S, t, b, fam) {
   switch (t.kind) {
     case 'evergreen':
     case 'deciduous':
-    case 'bush':
+    case 'bush': {
       if (white && first(t, 'snow')) return [step('treeSnow', () => R.treeSnow(S, t, b))];
       if (warm && t.kind === 'evergreen' && first(t, 'glow')) return [step('treeGlow', () => R.treeGlow(S, t, b))];
       if (warm && t.kind !== 'evergreen' && first(t, 'autumn')) return [step('autumn', () => R.autumn(S, t, b))];
-      return [step(t.kind, () => friend(S, t, b.tint, Math.sign(b.x - t.meta.x) || 1) || R.treeGlow(S, t, b), { say: 'company' })];
+      // A friend, if there's ground beside him. With none (an island tree, the tip of a bank), light catches him
+      // instead, once; after that the paint lands as if he weren't there.
+      const buddy = friend(S, t, b.tint, Math.sign(b.x - t.meta.x) || 1);
+      if (buddy) return [step(t.kind, () => buddy, { say: 'company' })];
+      if (first(t, 'glow')) return [step('treeGlow', () => R.treeGlow(S, t, b))];
+      return null;
+    }
 
     case 'mountain':
       if (white && first(t, 'snow')) return [step('snowfall', () => R.snowfall(S, t, b))];

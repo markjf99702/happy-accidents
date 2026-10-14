@@ -45,7 +45,7 @@ Paint that lands on something already there changes it instead:
 | a tree | white | snow settles on it |
 | an evergreen | yellow or red | late light catches its side |
 | a leafy tree or bush | yellow or red | it turns to autumn |
-| a tree | anything else | a friend grows next to it |
+| a tree | anything else | a friend grows next to it (with no ground beside it, light catches it instead) |
 | a mountain | white / blue / yellow or red / green | fresh snow / a waterfall / alpenglow / trees up the slope |
 | the sun or moon | warm or white | the whole sky warms into a sunset |
 | the sun or moon | anything else | a cloud drifts across it |
