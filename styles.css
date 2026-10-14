@@ -314,6 +314,13 @@ kbd {
   box-shadow: 0 10px 22px -8px rgba(0, 0, 0, 0.8);
 }
 
+/* Below the wide layout the easel spans the page, so the ledge can only reach into the gutter, not past it. */
+@media (max-width: 959px) {
+  .ledge {
+    margin-inline: max(-3%, -12px);
+  }
+}
+
 .hint {
   position: absolute;
   z-index: 3;

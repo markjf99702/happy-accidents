@@ -180,8 +180,13 @@ assert.ok(kinds.includes('treeSnow') || kinds.includes('deciduous'), `white on l
 kinds = await paintWith('phthalo-blue', 'land', 30, 'tree');
 assert.ok(kinds.includes('evergreen'), `blue on land is a blue spruce (${kinds})`);
 
-// Fits a phone: nothing scrolls sideways.
+// Fits a phone: nothing scrolls sideways. Nor on a tablet, or a phone on its side, in the same stacked layout.
 assert.equal(await S(() => document.documentElement.scrollWidth <= innerWidth), true, 'the page scrolls sideways on a phone');
+for (const width of [600, 768, 959]) {
+  await page.setViewportSize({ width, height: 1000 });
+  assert.equal(await S(() => document.documentElement.scrollWidth <= innerWidth), true, `the page scrolls sideways at ${width} px wide`);
+}
+await page.setViewportSize({ width: 390, height: 844 });
 
 // The S key opens the sign form without typing an "s" into it.
 const watchTyping = () => S(() => {
