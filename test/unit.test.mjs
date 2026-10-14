@@ -114,6 +114,15 @@ test('the README says what each file is for', async () => {
   for (const f of [...code, 'src/paint/', 'fonts/', 'sw.js', 'carry.js']) assert.ok(list.includes(`- \`${f}\`:`), `the README's Files list leaves out ${f}`);
 });
 
+test('the screenshot tool starts its random numbers again before each painting', async () => {
+  // The page paints its own first canvas as it loads, and how far it gets depends on timing; without this, the same
+  // seed gave different paintings from run to run.
+  const tool = await readFile(join(root, 'tools/screenshots.mjs'), 'utf8');
+  const paintings = tool.split('page.evaluate(').filter((call) => call.includes('newCanvas('));
+  assert.ok(paintings.length >= 2, 'the screenshot tool paints its canvases somewhere else now');
+  for (const call of paintings) assert.match(call.slice(0, call.indexOf('newCanvas(')), /reseed\(/, `a painting in tools/screenshots.mjs isn't reseeded first: ${call.slice(0, 120)}`);
+});
+
 test('the offline copy lists every file the page needs', async () => {
   const sw = await readFile(join(root, 'sw.js'), 'utf8');
   const listed = new Set([...sw.matchAll(/'([^']+\.(?:js|css|woff2|svg|html|webmanifest))'/g)].map((m) => m[1]));

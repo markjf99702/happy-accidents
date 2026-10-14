@@ -1,5 +1,6 @@
 // Renders the README screenshots (docs/*.png) and the link preview (og.png):  node tools/screenshots.mjs
-// Math.random is seeded, so the same paintings come out every time. Needs Playwright, and upng-js from `npm install`.
+// Math.random is seeded, and the sequence starts again right before each painting, so the same paintings come out
+// every time. Needs Playwright, and upng-js from `npm install`.
 import { createRequire } from 'node:module';
 import { execSync } from 'node:child_process';
 import { createServer } from 'node:http';
@@ -37,10 +38,13 @@ async function open(viewport, deviceScaleFactor) {
   await page.addInitScript(seed => {
     let a = seed; // mulberry32
     Math.random = () => { a |= 0; a = a + 0x6D2B79F5 | 0; let t = Math.imul(a ^ a >>> 15, 1 | a); t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t; return ((t ^ t >>> 14) >>> 0) / 4294967296; };
+    // The page paints its own first canvas as it loads, and how far it gets depends on timing, so each painting here
+    // starts the sequence again.
+    window.reseed = (s) => { a = s; };
   }, SEED);
   await page.goto(base);
   await page.evaluate(() => document.fonts.ready);
-  await page.evaluate(() => { window.happyAccidents.skipIntro(); window.happyAccidents.newCanvas('autumn-blaze'); });
+  await page.evaluate((seed) => { window.happyAccidents.skipIntro(); window.reseed(seed); window.happyAccidents.newCanvas('autumn-blaze'); }, SEED);
   await settle(page);
   return page;
 }
@@ -99,7 +103,7 @@ async function paint(page) {
   await page.waitForTimeout(400);
   await save(await page.screenshot(), 'docs/phone-splat.png');
 
-  await page.evaluate(() => { window.happyAccidents.newCanvas('golden-hour'); });
+  await page.evaluate((seed) => { window.reseed(seed); window.happyAccidents.newCanvas('golden-hour'); }, SEED + 1);
   await settle(page);
   await paint(page);
   await page.click('#signBtn');
