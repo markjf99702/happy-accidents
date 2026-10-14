@@ -180,6 +180,50 @@ assert.ok(kinds.includes('treeSnow') || kinds.includes('deciduous'), `white on l
 kinds = await paintWith('phthalo-blue', 'land', 30, 'tree');
 assert.ok(kinds.includes('evergreen'), `blue on land is a blue spruce (${kinds})`);
 
+// A cabin's layer leaves room for its chimney smoke instead of cutting it off flat. At golden hour a cabin has its
+// lights on and smoke going from the start; on a misty morning, yellow on it does that. Nothing reaches the top edge.
+for (const mood of ['golden-hour', 'misty-morning']) {
+  await S((mood) => window.happyAccidents.newCanvas(mood), mood);
+  await settle();
+  await S(async () => {
+    const { PIGMENTS } = await import('./src/schemes.js');
+    const st = window.happyAccidents;
+    st.addSplat({ x: st.W * 0.3, y: st.hy + (st.H - st.hy) * 0.55, R: 48, pigment: PIGMENTS.find((p) => p.id === 'sap-green'), hint: 'bank', delay: 50 });
+  });
+  await page.waitForTimeout(200);
+  await settle();
+  await S(async () => {
+    const { PIGMENTS } = await import('./src/schemes.js');
+    const st = window.happyAccidents;
+    const spots = st.elements.find((e) => e.kind === 'bank').meta.spots;
+    const [x, y] = spots[Math.floor(spots.length / 2)];
+    st.addSplat({ x, y, R: 40, pigment: PIGMENTS.find((p) => p.id === 'van-dyke-brown'), hint: 'cabin', delay: 50 });
+  });
+  await page.waitForTimeout(200);
+  await settle();
+  if (mood === 'misty-morning') {
+    await S(async () => {
+      const { PIGMENTS } = await import('./src/schemes.js');
+      const st = window.happyAccidents;
+      const m = st.elements.find((e) => e.kind === 'cabin').meta;
+      st.addSplat({ x: (m.x0 + m.x1) / 2, y: m.baseY - m.size * 0.2, R: 16, pigment: PIGMENTS.find((p) => p.id === 'cadmium-yellow'), delay: 50 });
+    });
+    await page.waitForTimeout(200);
+    await settle();
+  }
+  const cabin = await S(() => {
+    const c = window.happyAccidents.elements.find((e) => e.kind === 'cabin');
+    if (!c) return null;
+    const row = c.ctx.getImageData(0, 0, c.canvas.width, 1).data;
+    let top = 0;
+    for (let i = 3; i < row.length; i += 4) top = Math.max(top, row[i]);
+    return { glow: c.meta.glow, top };
+  });
+  assert.ok(cabin, `a cabin was painted (${mood})`);
+  assert.equal(cabin.glow, true, `the cabin's lights are on (${mood})`);
+  assert.equal(cabin.top, 0, `the chimney smoke runs into the top edge of the cabin's layer (${mood})`);
+}
+
 // Fits a phone: nothing scrolls sideways. Nor on a tablet, or a phone on its side, in the same stacked layout.
 assert.equal(await S(() => document.documentElement.scrollWidth <= innerWidth), true, 'the page scrolls sideways on a phone');
 for (const width of [600, 768, 959]) {

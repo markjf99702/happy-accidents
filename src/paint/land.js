@@ -344,6 +344,10 @@ export function cabin(S, p) {
   const all = front.concat(sideWall, roof);
   const b = boundsOf(all, s * 0.3);
   b.h += s * 0.2;
+  // Room above the roof for chimney smoke, which rises about 0.7 of the size above the chimney (from the start when it
+  // glows, or later from react.js when the lights come on). Without it the smoke is cut off flat.
+  b.y -= s * 0.45;
+  b.h += s * 0.45;
   const x0 = Math.min(m(fx0), m(fx1 + back));
   const x1 = Math.max(m(fx0), m(fx1 + back));
   return { kind: 'cabin', depth: by, reflect: false, bbox: b, ops, dur: 2000, meta: { x: cx, baseY: by, size: s, roof, win, chim, glow, x0, x1, lit } };
