@@ -377,6 +377,14 @@ await page.waitForFunction(() => window.happyAccidents && window.happyAccidents.
 assert.equal(await page.title(), 'Happy Accidents');
 await ctx.setOffline(false);
 
+// With JavaScript off, the page says what it needs on the first screen, not below an easel that does nothing.
+const noScript = await browser.newContext({ viewport: { width: 390, height: 844 }, javaScriptEnabled: false });
+const plain = await noScript.newPage();
+await plain.goto(base);
+const note = await plain.locator('.noscript').boundingBox();
+assert.ok(note && note.y + note.height <= 844, `the note about JavaScript is below the first screen (${JSON.stringify(note)})`);
+await noScript.close();
+
 assert.deepEqual(problems.filter((p) => !p.startsWith('failed:')), [], 'problems while painting');
 await browser.close();
 server.close();
