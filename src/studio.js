@@ -41,6 +41,9 @@ const FITS = {
 // Things a splat can land on without touching them: the sky itself, light, weather and small marks.
 const SEE_THROUGH = new Set(['sky', 'sunpath', 'signature', 'mist', 'aurora', 'stars', 'birds', 'ripples', 'rain', 'foothills', 'waterfall', 'flowers']);
 
+// Things floating on the lake, which land laid over them covers.
+const AFLOAT = new Set(['sailboat', 'canoe', 'glints', 'ripples']);
+
 const paintFor = (hint) => {
   const id = pick(PAINT_FOR[hint] || PAINT_FOR.cloud);
   return PIGMENTS.find((p) => p.id === id);
@@ -191,7 +194,10 @@ export class Studio {
     return this.mctx.getImageData(mx, my, 1, 1).data[3] > 100;
   }
 
-  addLand(pts) {
+  // New ground, outlined by pts. Anything floating where there's ground now (a boat, glints, ripples) moves to just
+  // behind the land's layer, at depth, so the land covers it instead of it sitting on the grass; a tall sail still
+  // shows over the top.
+  addLand(pts, depth) {
     const m = this.mctx;
     m.save();
     m.scale(0.25, 0.25);
@@ -201,6 +207,10 @@ export class Studio {
     m.closePath();
     m.fill();
     m.restore();
+    if (depth === undefined) return;
+    for (const el of this.elements) {
+      if (AFLOAT.has(el.kind) && el.depth >= depth && el.meta && this.isLand(el.meta.x, el.meta.y - 2)) el.depth = depth - 0.5;
+    }
   }
 
   // What's painted at a point: the frontmost element whose paint is actually there.

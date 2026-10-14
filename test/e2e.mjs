@@ -206,6 +206,34 @@ const night = await S(() => ({ said: window.said, glow: window.happyAccidents.co
 assert.equal(night.glow, 1, 'warm paint on the moon lit up the sky');
 assert.ok(night.said.length >= 2 && night.said.every((l) => !/\bsun\b/.test(l)), `the painter called the moon the sun (${night.said.join(' / ')})`);
 
+// Land laid over the lake covers whatever was floating there: a sailboat under the new ground goes behind it (the tip
+// of its sail can still show over the top) instead of sitting on the grass.
+await S(() => window.happyAccidents.newCanvas('golden-hour'));
+await settle();
+await S(async () => {
+  const { PIGMENTS } = await import('./src/schemes.js');
+  const st = window.happyAccidents;
+  st.addSplat({ x: st.W * 0.6, y: st.hy + (st.H - st.hy) * 0.5, R: 24, pigment: PIGMENTS.find((p) => p.id === 'titanium-white'), delay: 50 });
+});
+await page.waitForTimeout(200);
+await settle();
+await S(async () => {
+  const { PIGMENTS } = await import('./src/schemes.js');
+  const st = window.happyAccidents;
+  const { meta } = st.elements.find((e) => e.kind === 'sailboat');
+  st.addSplat({ x: meta.x, y: meta.y, R: 44, pigment: PIGMENTS.find((p) => p.id === 'sap-green'), hint: 'bank', delay: 50 });
+});
+await page.waitForTimeout(200);
+await settle();
+const ashore = await S(() => {
+  const st = window.happyAccidents;
+  const boat = st.elements.find((e) => e.kind === 'sailboat');
+  const land = st.elements.find((e) => e.kind === 'bank');
+  return { underLand: st.isLand(boat.meta.x, boat.meta.y - 2), inFront: st.elements.indexOf(boat) > st.elements.indexOf(land) };
+});
+assert.ok(ashore.underLand, 'the land was laid over the sailboat');
+assert.equal(ashore.inFront, false, 'the sailboat sat on the grass, in front of the land laid over it');
+
 // The paint's color decides what a splat becomes. Each check starts on a clean canvas and reports what got painted.
 // where: { sky: 0..1 } is from the top of the canvas down to the horizon; { lake: 0..1 } from the horizon down;
 // 'land' is a spot on a bank of Sap Green land laid down first.

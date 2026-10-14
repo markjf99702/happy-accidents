@@ -100,7 +100,7 @@ export function ripples(S, p) {
   const ys = spots.map((q) => q.y);
   const bx = Math.min(...xs) - spread - 40;
   const by = Math.min(...ys) - spread * 0.3 - 6;
-  return { kind: 'ripples', depth: p.y, reflect: false, bbox: { x: bx, y: by, w: Math.max(...xs) + spread + 40 - bx, h: Math.max(...ys) + spread * 0.3 + 10 - by }, ops, dur: 700 };
+  return { kind: 'ripples', depth: p.y, reflect: false, bbox: { x: bx, y: by, w: Math.max(...xs) + spread + 40 - bx, h: Math.max(...ys) + spread * 0.3 + 10 - by }, ops, dur: 700, meta: { x: p.x, y: p.y } };
 }
 
 // Sparkles on the water under the sun (or moon).
@@ -286,5 +286,5 @@ export function glints(S, p) {
       }
     });
   }
-  return { kind: 'glints', depth: p.y, reflect: false, bbox: { x: p.x - w * 0.6 - 60, y: p.y - h * 0.6 - 60, w: w * 1.2 + 120, h: h * 1.2 + 120 }, ops, dur: 900 };
+  return { kind: 'glints', depth: p.y, reflect: false, bbox: { x: p.x - w * 0.6 - 60, y: p.y - h * 0.6 - 60, w: w * 1.2 + 120, h: h * 1.2 + 120 }, ops, dur: 900, meta: { x: p.x, y: p.y } };
 }

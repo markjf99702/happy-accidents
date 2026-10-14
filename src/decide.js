@@ -291,7 +291,7 @@ function tallTree(S, b) {
     'bank',
     () => {
       const spec = P.bank(S, { ...b, shape: null, x: bx, y: hy + (H - hy) * rand(0.68, 0.8), R: rand(36, 48), side, connect: true, ground: pal(S, GROUND.green) });
-      S.addLand(spec.meta.outline);
+      S.addLand(spec.meta.outline, spec.depth);
       return spec;
     },
     { say: 'tallTree' },
@@ -359,7 +359,7 @@ function water(S, b, c, hint, vertical, dT) {
     const ground = GROUND[c.fam === 'yellow' ? 'yellow' : c.fam];
     const base = step(kind, () => {
       const spec = P.bank(S, { ...b, connect, ground: ground && pal(S, ground) });
-      S.addLand(spec.meta.outline);
+      S.addLand(spec.meta.outline, spec.depth);
       return spec;
     });
     const steps = [base];
