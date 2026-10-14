@@ -31,7 +31,7 @@
 
 | Paint | High in the sky | Low in the sky | On the lake | On land |
 | --- | --- | --- | --- | --- |
-| White | a white cloud, the sun or moon, or stars at night | a snowy mountain or a cloud | a sailboat, or light on the water | a snowy pine or a birch |
+| White | a white cloud, the sun or moon, or stars at night | a snowy mountain or a cloud | a sailboat, or light on the water | a snowy pine, a birch or a white cabin |
 | Yellow | the sun, then golden clouds | the sun or golden clouds | glints of light, or land from Yellow Ochre | a golden tree or bush |
 | Red | a sunset cloud | a red-rock mountain or a sunset cloud | a canoe | a red tree or bush, or a red cabin |
 | Green | the top of a tall pine, or an aurora at night | a wooded mountain | land, an island or a mossy rock | pines, leafy trees and bushes |
@@ -47,10 +47,12 @@ Paint that lands on something already there changes it instead:
 | a leafy tree or bush | yellow or red | it turns to autumn |
 | a tree | anything else | a friend grows next to it (with no ground beside it, light catches it instead) |
 | a mountain | white / blue / yellow or red / green | fresh snow / a waterfall / alpenglow / trees up the slope |
+| a mountain | anything else | trees up the slope, or a drift of mist |
 | the sun or moon | warm or white | the whole sky warms into a sunset, or lights up around the moon |
 | the sun or moon | anything else | a cloud drifts across it |
 | a cloud | something dark | it turns stormy and rains |
-| the cabin | white / warm / anything | snow on the roof / the lights come on / a garden |
+| a cloud | yellow or red | its edges catch the light |
+| the cabin | white / warm / anything | snow on the roof / the lights come on (if they aren't on already) / a garden |
 | a rock | green / white | moss / snow |
 
 ## Running it
