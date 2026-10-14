@@ -255,7 +255,8 @@ assert.deepEqual(await S(() => window.typed), [], 'pressing S typed into the sig
 await page.keyboard.press('Escape');
 
 // Sign it: the label shows and the painting goes up in the gallery. A splat still wet when you sign gets painted in
-// before the painting is framed, and until then New canvas, Sign it and Let it happen wait, from the buttons or the keys.
+// before the painting is framed, and until then New canvas, Sign it, Let it happen and the gallery wall wait, from the
+// buttons or the keys. (Paint another on an older painting from the wall would start over under the signature.)
 await S(async () => {
   const { PIGMENTS } = await import('./src/schemes.js');
   const st = window.happyAccidents;
@@ -272,10 +273,13 @@ await page.click('#signBtn');
 assert.equal(await page.isHidden('#signSheet'), true, 'Sign it waits while the painting is being signed');
 await page.click('#autoBtn');
 assert.equal(await page.getAttribute('#autoBtn', 'aria-pressed'), 'false', 'Let it happen waits while the painting is being signed');
-for (const key of ['n', 's', 'a']) await page.keyboard.press(key);
+await page.click('#galleryBtn');
+assert.equal(await page.isHidden('#gallery'), true, 'Gallery waits while the painting is being signed');
+for (const key of ['n', 's', 'a', 'g']) await page.keyboard.press(key);
 assert.equal(await page.textContent('#canvasNo'), canvasNo, 'N waits while the painting is being signed');
 assert.equal(await page.isHidden('#signSheet'), true, 'S waits while the painting is being signed');
 assert.equal(await page.getAttribute('#autoBtn', 'aria-pressed'), 'false', 'A waits while the painting is being signed');
+assert.equal(await page.isHidden('#gallery'), true, 'G waits while the painting is being signed');
 await page.waitForSelector('#placard:not([hidden])', { timeout: 15000 });
 assert.equal(await page.textContent('#plTitle'), 'Test Pattern at Otter Cove');
 assert.equal(await page.textContent('#plArtist'), 'Robin');

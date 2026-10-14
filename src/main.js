@@ -269,7 +269,8 @@ function oops() {
 }
 
 // True from Sign it in the sign form until the label is up: the signature is going on and the painting is about to
-// be framed, so starting over, signing again or letting more accidents happen waits until then.
+// be framed, so starting over, signing again, letting more accidents happen or opening the wall waits until then.
+// (From the wall, Paint another on an older painting would start over under the signature, and it would never finish.)
 let signing = false;
 
 let autoTimer = null;
@@ -490,6 +491,7 @@ function updateCount() {
 }
 
 function openGallery() {
+  if (signing) return;
   setAuto(false);
   renderWall();
   openOverlay($('gallery'), $('closeGallery'));
