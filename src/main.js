@@ -395,8 +395,9 @@ $('signForm').addEventListener('submit', async (e) => {
     app.inert = false;
     narrate({ line: line('signature'), info: 'Liner brush · Bright Red' });
     await studio.sign(name);
-    // Let anything still being painted finish before we frame it.
-    for (let i = 0; i < 40 && studio.busy; i++) await new Promise((r) => setTimeout(r, 100));
+    // Let anything still being painted finish before we frame it. The longest plans (a family of snowy pines in the
+    // foreground) take about 12 seconds, so this waits up to 15.
+    for (let i = 0; i < 150 && studio.busy; i++) await new Promise((r) => setTimeout(r, 100));
     const s = studio.summary();
     const full = studio.snapshot(studio.W * studio.k, 'image/jpeg', 0.92);
     const record = {

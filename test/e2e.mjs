@@ -326,13 +326,20 @@ assert.equal(await S(() => document.activeElement.id), 'artistName', 'with no na
 assert.deepEqual(await S(() => window.typed), [], 'pressing S typed into the sign form');
 await page.keyboard.press('Escape');
 
-// Sign it: the label shows and the painting goes up in the gallery. A splat still wet when you sign gets painted in
-// before the painting is framed, and until then New canvas, Sign it, Let it happen and the gallery wall wait, from the
+// Sign it: the label shows and the painting goes up in the gallery. Anything still being painted when you sign is
+// finished before the painting is framed, even something slow (here a splat that stays wet for eight seconds, longer
+// than the wait used to last), and until then New canvas, Sign it, Let it happen and the gallery wall wait, from the
 // buttons or the keys. (Paint another on an older painting from the wall would start over under the signature.)
 await S(async () => {
   const { PIGMENTS } = await import('./src/schemes.js');
   const st = window.happyAccidents;
-  st.addSplat({ x: st.W * 0.7, y: st.hy * 0.3, R: 20, pigment: PIGMENTS[0], delay: 2500 });
+  st.addSplat({ x: st.W * 0.7, y: st.hy * 0.3, R: 20, pigment: PIGMENTS[0], delay: 8000 });
+  window.framedBusy = [];
+  const snapshot = st.snapshot.bind(st);
+  st.snapshot = (...args) => {
+    window.framedBusy.push(st.busy);
+    return snapshot(...args);
+  };
 });
 await page.click('#signBtn');
 await page.fill('#artistName', 'Robin');
@@ -352,7 +359,8 @@ assert.equal(await page.textContent('#canvasNo'), canvasNo, 'N waits while the p
 assert.equal(await page.isHidden('#signSheet'), true, 'S waits while the painting is being signed');
 assert.equal(await page.getAttribute('#autoBtn', 'aria-pressed'), 'false', 'A waits while the painting is being signed');
 assert.equal(await page.isHidden('#gallery'), true, 'G waits while the painting is being signed');
-await page.waitForSelector('#placard:not([hidden])', { timeout: 15000 });
+await page.waitForSelector('#placard:not([hidden])', { timeout: 30000 });
+assert.deepEqual(await S(() => window.framedBusy), [false, false], 'the painting was framed while paint on it was still going on');
 assert.equal(await page.textContent('#plTitle'), 'Test Pattern at Otter Cove');
 assert.equal(await page.textContent('#plArtist'), 'Robin');
 assert.match(await page.textContent('#plNote'), /happy accidents/);
