@@ -5,7 +5,7 @@
 **A painting toy where you can't paint on purpose.** You flick, tap or pour paint at a canvas on an easel. After a beat, a gentle painter decides what each splat was trying to be and paints it in, stroke by stroke, in the splat's own color and shape. Paint that lands on something already there changes it. There's no undo.
 
 <p align="center">
-  <img src="docs/phone-painting.png" alt="An autumn lake painting on the easel: a snow-streaked mountain, two white clouds and a few birds above, pines and a red bush on banks of land at both sides, a white sailboat and a red canoe on the lake, and the painter's line about the canoe underneath" width="250">
+  <img src="docs/phone-painting.png" alt="An autumn lake painting on the easel: a snow-streaked mountain, two white clouds and a few birds above, two red maples and a pine on the left bank and a pine and a blue spruce on the right, a white sailboat and a red canoe on the lake, and the painter's line about the canoe underneath" width="250">
   &nbsp;
   <img src="docs/phone-splat.png" alt="The same painting with a glossy blue splat of paint just landed in the sky, droplets flung off to one side, still wet" width="250">
   &nbsp;
