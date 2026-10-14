@@ -183,6 +183,18 @@ assert.ok(kinds.includes('evergreen'), `blue on land is a blue spruce (${kinds})
 // Fits a phone: nothing scrolls sideways.
 assert.equal(await S(() => document.documentElement.scrollWidth <= innerWidth), true, 'the page scrolls sideways on a phone');
 
+// The S key opens the sign form without typing an "s" into it.
+const watchTyping = () => S(() => {
+  window.typed = [];
+  for (const id of ['artistName', 'artTitle']) document.getElementById(id).addEventListener('input', (e) => window.typed.push(`${id}: ${e.data}`));
+});
+await watchTyping();
+await page.keyboard.press('s');
+assert.equal(await page.isHidden('#signSheet'), false, 'S opens the sign form');
+assert.equal(await S(() => document.activeElement.id), 'artistName', 'with no name saved yet, S starts in the name field');
+assert.deepEqual(await S(() => window.typed), [], 'pressing S typed into the sign form');
+await page.keyboard.press('Escape');
+
 // Sign it: the label shows and the painting goes up in the gallery.
 await page.click('#signBtn');
 await page.fill('#artistName', 'Robin');
@@ -201,6 +213,14 @@ await page.evaluate(() => document.fonts.ready);
 assert.equal(await page.textContent('#galleryCount'), '1', 'the signed painting is still in the gallery after a reload');
 await page.keyboard.press('g');
 assert.equal(await page.locator('.wall-item').count(), 1);
+await page.keyboard.press('Escape');
+
+// With the name remembered, S starts in the title field, still without an "s" added to the title.
+await watchTyping();
+await page.keyboard.press('s');
+assert.equal(await S(() => document.activeElement.id), 'artTitle', 'with a name saved, S starts in the title field');
+assert.equal(await page.inputValue('#artistName'), 'Robin');
+assert.deepEqual(await S(() => window.typed), [], 'pressing S typed into the title');
 await page.keyboard.press('Escape');
 
 // Works offline once it has been opened.

@@ -527,6 +527,15 @@ $('closeGallery').addEventListener('click', () => closeOverlay($('gallery')));
 
 // ——— keyboard ———
 
+// Letter keys, pressed on their own.
+const shortcuts = new Map([
+  ['a', () => setAuto(!autoTimer)],
+  ['s', openSign],
+  ['n', newCanvas],
+  ['g', openGallery],
+  ['m', () => setSound(!sound.soundOn())],
+]);
+
 window.addEventListener('keydown', (e) => {
   const open = openOverlayEl();
   if (open) {
@@ -546,11 +555,12 @@ window.addEventListener('keydown', (e) => {
     oops();
   } else if (e.key === 'Enter' && e.target === canvas) {
     oops();
-  } else if (e.key === 'a') setAuto(!autoTimer);
-  else if (e.key === 's') openSign();
-  else if (e.key === 'n') newCanvas();
-  else if (e.key === 'g') openGallery();
-  else if (e.key === 'm') setSound(!sound.soundOn());
+  } else if (shortcuts.has(e.key)) {
+    // The key does its job and nothing else: S moves focus into the sign form during this keydown,
+    // and the browser would then type the "s" into it.
+    e.preventDefault();
+    shortcuts.get(e.key)();
+  }
 });
 
 // ——— start ———
