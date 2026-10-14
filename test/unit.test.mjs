@@ -39,6 +39,12 @@ test('titles are always real words', () => {
   }
 });
 
+test('night titles don’t say night twice, like Midnight Night', () => {
+  for (const id of ['northern-night', 'violet-dusk']) {
+    for (let i = 0; i < 600; i++) assert.doesNotMatch(makeTitle({ mountain: 1 }, id), /\b(Midnight|Evening) Night\b/);
+  }
+});
+
 test('the painter names the brush and a touch of the paint you used', () => {
   const blue = PIGMENTS.find((p) => p.id === 'phthalo-blue');
   assert.equal(toolInfo('mountain', blue), 'Palette knife · Van Dyke Brown, Prussian Blue, Titanium White · a touch of Phthalo Blue');

@@ -211,7 +211,7 @@ export function makeTitle(counts, schemeId) {
     () => `The ${adj} ${one}`,
     () => `Where the ${many} Are`,
     () => `${place}, ${pick(mood.time)}`,
-    () => `${adj} Morning at ${place}`.replace(/(Midnight|Evening|Dusky|Violet|Starlit|Sleeping|Northern) Morning/, '$1 Night'),
+    () => `${adj} Morning at ${place}`.replace(/(Midnight|Evening) Morning/, '$1').replace(/(Dusky|Violet|Starlit|Sleeping|Northern) Morning/, '$1 Night'),
   ];
   return pick(templates)();
 }
