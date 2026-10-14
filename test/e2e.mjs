@@ -226,8 +226,11 @@ await page.waitForSelector('#placard:not([hidden])', { timeout: 15000 });
 assert.equal(await page.textContent('#plTitle'), 'Test Pattern at Otter Cove');
 assert.equal(await page.textContent('#plArtist'), 'Robin');
 assert.match(await page.textContent('#plNote'), /happy accidents/);
+assert.equal(await S(() => document.getElementById('app').inert), true, 'the page behind the label is out of reach');
 await page.click('#keepBtn');
 assert.equal(await page.textContent('#galleryCount'), '1');
+assert.equal(await S(() => document.getElementById('app').inert), false);
+assert.equal(await S(() => document.activeElement.id), 'signBtn', 'after the label, focus goes back to Sign it');
 
 // Paint added after signing isn't on the wall, so New canvas asks first.
 await page.click('#oopsBtn');
@@ -252,6 +255,22 @@ assert.equal(await S(() => document.activeElement.id), 'artTitle', 'with a name 
 assert.equal(await page.inputValue('#artistName'), 'Robin');
 assert.deepEqual(await S(() => window.typed), [], 'pressing S typed into the title');
 await page.keyboard.press('Escape');
+
+// Keyboard focus stays with the overlays: Tab doesn't wander into the page behind the gallery, and closing a painting
+// opened from the wall goes back to the Gallery button that opened the wall.
+await page.focus('#galleryBtn');
+await page.keyboard.press('Enter');
+assert.equal(await page.isHidden('#gallery'), false);
+for (let i = 0; i < 5; i++) {
+  await page.keyboard.press('Tab');
+  assert.equal(await S(() => document.getElementById('app').contains(document.activeElement)), false, 'Tab went from the gallery to the page behind it');
+}
+await page.focus('.wall-open');
+await page.keyboard.press('Enter');
+assert.equal(await page.isHidden('#placard'), false);
+assert.equal(await page.isHidden('#gallery'), true);
+await page.keyboard.press('Escape');
+assert.equal(await S(() => document.activeElement.id), 'galleryBtn', 'closing a painting opened from the wall goes back to Gallery');
 
 // Works offline once it has been opened.
 await page.waitForFunction(() => navigator.serviceWorker && navigator.serviceWorker.controller, null, { timeout: 15000 });

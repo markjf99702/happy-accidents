@@ -336,17 +336,24 @@ soundBtn.addEventListener('click', () => setSound(!sound.soundOn()));
 
 // ——— overlays ———
 
+// While an overlay is up, the page behind it is inert, so Tab, taps and screen readers stay in the overlay.
+// One overlay can take over from another (the label once the signature is on, a painting opened from the wall);
+// when the last one closes, focus goes back to whatever opened the first.
+const app = $('app');
+const overlays = [$('signSheet'), $('placard'), $('gallery')];
 let returnFocus = null;
 function openOverlay(el, focusEl) {
-  returnFocus = document.activeElement;
-  el.hidden = false;
+  returnFocus ??= document.activeElement;
+  for (const o of overlays) o.hidden = o !== el;
+  app.inert = true;
   (focusEl || el.querySelector('button, input'))?.focus();
 }
-function closeOverlay(el) {
+function closeOverlay(el, focusEl = returnFocus) {
   el.hidden = true;
-  returnFocus?.focus?.();
+  app.inert = false;
+  returnFocus = null;
+  focusEl?.focus?.();
 }
-const overlays = [$('signSheet'), $('placard'), $('gallery')];
 for (const o of overlays) {
   o.addEventListener('click', (e) => {
     if (e.target === o) closeOverlay(o);
@@ -381,7 +388,9 @@ $('signForm').addEventListener('submit', async (e) => {
     const name = artistName.value.trim() || 'Anonymous';
     const title = artTitle.value.trim() || makeTitle(studio.counts, studio.scheme.id);
     store.set(KEY.name, name);
+    // The sheet steps aside so you can watch the signature go on; the label takes over from it after.
     $('signSheet').hidden = true;
+    app.inert = false;
     narrate({ line: line('signature'), info: 'Liner brush · Bright Red' });
     await studio.sign(name);
     // Let anything still being painted finish before we frame it.
@@ -405,6 +414,7 @@ $('signForm').addEventListener('submit', async (e) => {
     showPlacard(record, full);
   } finally {
     signing = false;
+    if (!openOverlayEl()) returnFocus = null;
   }
 });
 
@@ -428,7 +438,6 @@ function showPlacard(record, src) {
   saveBtn.textContent = 'Download image';
   saveBtn.onclick = () => saveImage(src || record.img, `${slug(record.title)}.jpg`);
   $('saveHint').hidden = canSave;
-  $('gallery').hidden = true;
   openOverlay($('placard'), $('anotherBtn'));
 }
 
@@ -454,10 +463,9 @@ async function saveImage(src, filename) {
 }
 
 $('anotherBtn').addEventListener('click', () => {
-  $('placard').hidden = true;
   setAuto(false);
   studio.newCanvas();
-  canvas.focus();
+  closeOverlay($('placard'), canvas);
 });
 $('keepBtn').addEventListener('click', () => closeOverlay($('placard')));
 
