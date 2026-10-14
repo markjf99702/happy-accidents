@@ -378,6 +378,16 @@ await page.click('#newBtn');
 assert.equal(await page.textContent('#newBtn'), 'Start over?', 'New canvas asks first when paint was added after signing');
 assert.equal(await page.textContent('#canvasNo'), canvasNo, 'the first tap of New canvas kept the painting');
 
+// So does Paint another on a painting opened from the wall: the first tap asks, and only a second one starts over.
+await page.click('#galleryBtn');
+await page.click('.wall-open');
+await page.click('#anotherBtn');
+assert.equal(await page.textContent('#anotherBtn'), 'Start over?', 'Paint another on a painting from the wall asks first when the easel has paint that isn’t hung');
+assert.equal(await page.textContent('#canvasNo'), canvasNo, 'the first tap of Paint another kept the painting');
+await page.click('#anotherBtn');
+assert.notEqual(await page.textContent('#canvasNo'), canvasNo, 'a second tap of Paint another starts over');
+assert.equal(await page.isHidden('#placard'), true);
+
 // The gallery survives a reload.
 await page.reload();
 await page.evaluate(() => document.fonts.ready);

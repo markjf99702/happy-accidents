@@ -298,23 +298,29 @@ function tickAuto(delay) {
   }, delay);
 }
 
-let newArmed = null;
+// A button that starts over asks first when there's paint that isn't on the gallery wall (all of it on an unsigned
+// canvas, or whatever was added since signing): the first tap turns it into "Start over?" for three seconds, and only
+// a tap on that goes ahead. Returns true when it's fine to start over.
+const armed = new Map();
+function disarm(btn, label) {
+  clearTimeout(armed.get(btn));
+  armed.delete(btn);
+  btn.textContent = label;
+}
+function askFirst(btn, label) {
+  const unsaved = studio.accidents > (studio.signed?.accidents ?? 0);
+  if (unsaved && !armed.has(btn)) {
+    btn.textContent = 'Start over?';
+    armed.set(btn, setTimeout(() => disarm(btn, label), 3000));
+    return false;
+  }
+  disarm(btn, label);
+  return true;
+}
+
 const newBtn = $('newBtn');
 function newCanvas() {
-  if (signing) return;
-  // Paint that isn't on the gallery wall: all of it on an unsigned canvas, or whatever was added since signing.
-  const unsaved = studio.accidents > (studio.signed?.accidents ?? 0);
-  if (unsaved && !newArmed) {
-    newBtn.textContent = 'Start over?';
-    newArmed = setTimeout(() => {
-      newArmed = null;
-      newBtn.textContent = 'New canvas';
-    }, 3000);
-    return;
-  }
-  clearTimeout(newArmed);
-  newArmed = null;
-  newBtn.textContent = 'New canvas';
+  if (signing || !askFirst(newBtn, 'New canvas')) return;
   setAuto(false);
   userActed();
   studio.newCanvas();
@@ -441,7 +447,8 @@ function showPlacard(record, src) {
   saveBtn.textContent = 'Download image';
   saveBtn.onclick = () => saveImage(src || record.img, `${slug(record.title)}.jpg`);
   $('saveHint').hidden = canSave;
-  openOverlay($('placard'), $('anotherBtn'));
+  disarm(anotherBtn, 'Paint another');
+  openOverlay($('placard'), anotherBtn);
 }
 
 async function saveImage(src, filename) {
@@ -465,7 +472,11 @@ async function saveImage(src, filename) {
   a.remove();
 }
 
-$('anotherBtn').addEventListener('click', () => {
+// Right after signing nothing is lost, so this starts over at once; on an older painting opened from the wall, the
+// easel may hold paint that isn't hung yet, so it asks first, like New canvas.
+const anotherBtn = $('anotherBtn');
+anotherBtn.addEventListener('click', () => {
+  if (!askFirst(anotherBtn, 'Paint another')) return;
   setAuto(false);
   studio.newCanvas();
   closeOverlay($('placard'), canvas);
