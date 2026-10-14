@@ -250,6 +250,11 @@ await page.keyboard.press('g');
 assert.equal(await page.locator('.wall-item').count(), 1);
 await page.keyboard.press('Escape');
 
+// Shift (or Caps Lock) doesn't stop the letter keys: the key hints show them as capitals.
+await page.keyboard.press('Shift+G');
+assert.equal(await page.isHidden('#gallery'), false, 'Shift+G opens the gallery');
+await page.keyboard.press('Escape');
+
 // With the name remembered, S starts in the title field, still without an "s" added to the title.
 await watchTyping();
 await page.keyboard.press('s');

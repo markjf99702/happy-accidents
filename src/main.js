@@ -551,7 +551,7 @@ $('closeGallery').addEventListener('click', () => closeOverlay($('gallery')));
 
 // ——— keyboard ———
 
-// Letter keys, pressed on their own.
+// Letter keys, pressed on their own. Shift or Caps Lock doesn't matter: the hints show them as capitals.
 const shortcuts = new Map([
   ['a', () => setAuto(!autoTimer)],
   ['s', openSign],
@@ -574,16 +574,17 @@ window.addEventListener('keydown', (e) => {
   }
   if (e.metaKey || e.ctrlKey || e.altKey) return;
   const onButton = e.target.closest?.('button');
+  const shortcut = shortcuts.get(e.key?.toLowerCase());
   if (e.key === ' ' && !onButton) {
     e.preventDefault();
     oops();
   } else if (e.key === 'Enter' && e.target === canvas) {
     oops();
-  } else if (shortcuts.has(e.key)) {
+  } else if (shortcut) {
     // The key does its job and nothing else: S moves focus into the sign form during this keydown,
     // and the browser would then type the "s" into it.
     e.preventDefault();
-    shortcuts.get(e.key)();
+    shortcut();
   }
 });
 
