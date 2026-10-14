@@ -68,20 +68,20 @@
   </section>
 </div>
 
-<div class="overlay" id="signSheet" hidden>
+<div class="overlay" id="signSheet" role="dialog" aria-modal="true" aria-labelledby="signTitle" hidden>
   <form class="sheet" id="signForm" autocomplete="off">
-    <h2 class="sheet-title">Sign your painting</h2>
+    <h2 class="sheet-title" id="signTitle">Sign your painting</h2>
     <label class="field" for="artistName">
       <span>Your name</span>
       <input id="artistName" name="artist" maxlength="28" placeholder="Anonymous" required>
     </label>
-    <label class="field" for="artTitle">
-      <span>Title</span>
+    <div class="field">
+      <label for="artTitle">Title</label>
       <span class="with-button">
         <input id="artTitle" name="title" maxlength="60">
         <button type="button" class="quiet small" id="rerollBtn">Another</button>
       </span>
-    </label>
+    </div>
     <div class="sheet-actions">
       <button type="button" class="quiet" id="cancelSign">Not yet</button>
       <button type="submit" class="primary">Sign it</button>

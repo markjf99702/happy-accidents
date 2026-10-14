@@ -196,6 +196,8 @@ const watchTyping = () => S(() => {
 await watchTyping();
 await page.keyboard.press('s');
 assert.equal(await page.isHidden('#signSheet'), false, 'S opens the sign form');
+assert.equal(await page.getByRole('dialog', { name: 'Sign your painting' }).count(), 1, 'the sign form is a dialog named for its heading');
+assert.equal(await page.getByRole('textbox', { name: 'Title', exact: true }).count(), 1, 'the title field is named just Title');
 assert.equal(await S(() => document.activeElement.id), 'artistName', 'with no name saved yet, S starts in the name field');
 assert.deepEqual(await S(() => window.typed), [], 'pressing S typed into the sign form');
 await page.keyboard.press('Escape');
