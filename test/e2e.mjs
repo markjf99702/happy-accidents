@@ -37,6 +37,18 @@ const S = (fn, arg) => page.evaluate(fn, arg);
 const settle = () => page.waitForFunction(() => !window.happyAccidents.busy && !window.happyAccidents.active.length, null, { timeout: 20000 });
 const total = () => S(() => Object.entries(window.happyAccidents.counts).filter(([k]) => k !== 'sky').reduce((a, [, n]) => a + n, 0));
 const box = async () => page.locator('#canvas').boundingBox();
+// From here on (until the next reload), every line the painter says is kept in window.said, emptied on each call.
+const listen = () => S(() => {
+  const st = window.happyAccidents;
+  window.said = [];
+  if (st.hooks.listening) return;
+  const narrate = st.hooks.onNarrate;
+  st.hooks.onNarrate = (n) => {
+    window.said.push(n.line);
+    narrate(n);
+  };
+  st.hooks.listening = true;
+});
 
 await page.goto(base);
 await page.evaluate(() => document.fonts.ready);
@@ -148,13 +160,8 @@ await settle();
 await S(() => {
   const st = window.happyAccidents;
   st.mctx.clearRect(0, 0, st.mask.width, st.mask.height); // no ground anywhere beside the island's tree now
-  window.said = [];
-  const narrate = st.hooks.onNarrate;
-  st.hooks.onNarrate = (n) => {
-    window.said.push(n.line);
-    narrate(n);
-  };
 });
+await listen();
 for (let i = 0; i < 2; i++) {
   await S(async () => {
     const { PIGMENTS } = await import('./src/schemes.js');
@@ -173,6 +180,31 @@ const lonely = await S(async () => {
 });
 assert.deepEqual(lonely.company, [], 'the painter said a tree got company, but no friend grew');
 assert.equal(lonely.glows, 1, `light caught a tree with no ground beside it once, not again and again (${lonely.glows})`);
+
+// At night it's the moon up there, and the painter calls it the moon: warm paint on it lights up the sky around it,
+// and other paint drifts a cloud across it.
+await S(() => window.happyAccidents.newCanvas('northern-night'));
+await settle();
+await S(async () => {
+  const { PIGMENTS } = await import('./src/schemes.js');
+  const st = window.happyAccidents;
+  st.addSplat({ x: st.W * 0.3, y: st.hy * 0.3, R: 24, pigment: PIGMENTS.find((p) => p.id === 'titanium-white'), hint: 'sun', delay: 50 });
+});
+await page.waitForTimeout(200);
+await settle();
+await listen();
+for (const id of ['cadmium-yellow', 'phthalo-blue']) {
+  await S(async (id) => {
+    const { PIGMENTS } = await import('./src/schemes.js');
+    const st = window.happyAccidents;
+    st.addSplat({ ...st.spotOn(st.elements.find((e) => e.kind === 'moon')), pigment: PIGMENTS.find((p) => p.id === id), delay: 50 });
+  }, id);
+  await page.waitForTimeout(200);
+  await settle();
+}
+const night = await S(() => ({ said: window.said, glow: window.happyAccidents.counts.sunset || 0 }));
+assert.equal(night.glow, 1, 'warm paint on the moon lit up the sky');
+assert.ok(night.said.length >= 2 && night.said.every((l) => !/\bsun\b/.test(l)), `the painter called the moon the sun (${night.said.join(' / ')})`);
 
 // The paint's color decides what a splat becomes. Each check starts on a clean canvas and reports what got painted.
 // where: { sky: 0..1 } is from the top of the canvas down to the horizon; { lake: 0..1 } from the horizon down;

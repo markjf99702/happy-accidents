@@ -108,9 +108,10 @@ function react(S, t, b, fam) {
     case 'sun':
     case 'moon': {
       const skyEl = S.elements.find((e) => e.kind === 'sky');
-      if ((warm || white) && skyEl && first(t, 'sunset')) return [step('sunset', () => R.sunset(S, skyEl, t, b))];
+      const moon = t.kind === 'moon';
+      if ((warm || white) && skyEl && first(t, 'sunset')) return [step('sunset', () => R.sunset(S, skyEl, t, b), { say: moon ? 'moonGlow' : 'sunset' })];
       const { x, y, r } = t.meta;
-      return [step('cloudOverSun', () => P.cloud(S, { ...b, ...cloudLook(S, { fam, rgb: b.tint }), x: x + rand(-0.5, 0.5) * r, y: y + rand(-0.3, 0.3) * r, R: r * 1.2, elong: 2.6 }))];
+      return [step('cloudOverSun', () => P.cloud(S, { ...b, ...cloudLook(S, { fam, rgb: b.tint }), x: x + rand(-0.5, 0.5) * r, y: y + rand(-0.3, 0.3) * r, R: r * 1.2, elong: 2.6 }), { say: moon ? 'cloudOverMoon' : 'cloudOverSun' })];
     }
 
     case 'cloud':
