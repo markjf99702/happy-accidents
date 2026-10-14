@@ -114,6 +114,15 @@ test('the README says what each file is for', async () => {
   for (const f of [...code, 'src/paint/', 'fonts/', 'sw.js', 'carry.js']) assert.ok(list.includes(`- \`${f}\`:`), `the README's Files list leaves out ${f}`);
 });
 
+test('the gallery wall says how many paintings it keeps', async () => {
+  // Signing one more than that takes the oldest painting down, so the wall says so.
+  const main = await readFile(join(root, 'src/main.js'), 'utf8');
+  const html = await readFile(join(root, 'index.html'), 'utf8');
+  const cap = main.match(/\[record, \.\.\.readGallery\(\)\]\.slice\(0, (\d+)\)/)?.[1];
+  assert.ok(cap, 'main.js keeps the wall to some other number of paintings now');
+  assert.match(html, new RegExp(`keeps your last ${cap} paintings`), `the wall doesn't say it keeps ${cap} paintings`);
+});
+
 test('the screenshot tool starts its random numbers again before each painting', async () => {
   // The page paints its own first canvas as it loads, and how far it gets depends on timing; without this, the same
   // seed gave different paintings from run to run.
