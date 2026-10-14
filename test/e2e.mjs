@@ -333,13 +333,15 @@ assert.deepEqual(outside.out, [], 'something was painted off the canvas');
 
 // A cabin's layer leaves room for its chimney smoke instead of cutting it off flat. At golden hour a cabin has its
 // lights on and smoke going from the start; on a misty morning, yellow on it does that. Nothing reaches the top edge.
+// (The bank goes halfway down the lake. A cabin only fits less than 0.62 of the way down, and the bank's middle spot
+// sits a little below the bank; from 0.55 it now and then landed past that and grew a tree, about 1 run in 100.)
 for (const mood of ['golden-hour', 'misty-morning']) {
   await S((mood) => window.happyAccidents.newCanvas(mood), mood);
   await settle();
   await S(async () => {
     const { PIGMENTS } = await import('./src/schemes.js');
     const st = window.happyAccidents;
-    st.addSplat({ x: st.W * 0.3, y: st.hy + (st.H - st.hy) * 0.55, R: 48, pigment: PIGMENTS.find((p) => p.id === 'sap-green'), hint: 'bank', delay: 50 });
+    st.addSplat({ x: st.W * 0.3, y: st.hy + (st.H - st.hy) * 0.5, R: 48, pigment: PIGMENTS.find((p) => p.id === 'sap-green'), hint: 'bank', delay: 50 });
   });
   await page.waitForTimeout(200);
   await settle();
