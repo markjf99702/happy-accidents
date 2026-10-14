@@ -41,7 +41,15 @@ const box = async () => page.locator('#canvas').boundingBox();
 await page.goto(base);
 await page.evaluate(() => document.fonts.ready);
 assert.equal(await S(() => document.fonts.check('24px Caprasimo')), true, 'the display font loaded from fonts/');
-await S(() => { window.happyAccidents.skipIntro(); window.happyAccidents.newCanvas('golden-hour'); });
+await S(() => window.happyAccidents.skipIntro());
+
+// On a phone the header line wraps, but the mood's name stays in one piece (not WINTER / HUSH).
+for (const id of await S(async () => (await import('./src/schemes.js')).SCHEMES.map((s) => s.id))) {
+  await S((id) => window.happyAccidents.newCanvas(id), id);
+  assert.equal(await S(() => document.getElementById('schemeName').getClientRects().length), 1, `the mood's name is split across lines (${id})`);
+}
+
+await S(() => window.happyAccidents.newCanvas('golden-hour'));
 await settle();
 
 // A tap in the sky becomes something.

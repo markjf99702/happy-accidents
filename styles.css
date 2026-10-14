@@ -215,6 +215,11 @@ kbd {
   font-variant-numeric: tabular-nums;
 }
 
+/* When the line wraps on a phone, the mood goes to the next line whole, not WINTER / HUSH. */
+#schemeName {
+  white-space: nowrap;
+}
+
 .top-actions {
   display: flex;
   gap: 4px;
