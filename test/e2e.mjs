@@ -260,6 +260,49 @@ assert.ok(kinds.includes('treeSnow') || kinds.includes('deciduous'), `white on l
 kinds = await paintWith('phthalo-blue', 'land', 30, 'tree');
 assert.ok(kinds.includes('evergreen'), `blue on land is a blue spruce (${kinds})`);
 
+// Things painted near the edges stay on the canvas: the sun or moon from paint at the very top, the bush beside a
+// cabin built at the edge of a bank, and the trees climbing a green mountain near a side.
+const outside = await S(async () => {
+  const { PIGMENTS } = await import('./src/schemes.js');
+  const { makeSplat } = await import('./src/splat.js');
+  const { decide } = await import('./src/decide.js');
+  const st = window.happyAccidents;
+  const paint = (id) => PIGMENTS.find((p) => p.id === id);
+  const out = [];
+  const off = (what, x0, x1, y0 = 0) => (x0 < 0 || x1 > st.W || y0 < 0) && out.push(`${what} at ${Math.round(x0)}..${Math.round(x1)}`);
+  for (let i = 0; i < 12; i++) {
+    st.newCanvas(i % 2 ? 'northern-night' : 'golden-hour');
+    const x = i % 3 === 0 ? 4 : i % 3 === 1 ? st.W - 4 : st.W * 0.5;
+    const { meta: m } = decide(st, makeSplat({ x, y: 6, R: 60, pigment: paint('titanium-white'), hint: 'sun' }))[0].make();
+    off('the sun', m.x - m.r, m.x + m.r, m.y - m.r);
+  }
+  let cabins = 0;
+  for (let i = 0; i < 16; i++) {
+    st.newCanvas('golden-hour');
+    const left = i % 2 === 0;
+    st.lightDir = left ? 1 : -1; // the bush's shady side faces the near edge
+    const bank = decide(st, makeSplat({ x: st.W * (left ? 0.1 : 0.9), y: st.hy + (st.H - st.hy) * 0.4, R: 40, pigment: paint('sap-green'), hint: 'bank' }))[0].make();
+    const spot = bank.meta.spots.find(([sx, sy]) => (left ? sx < 60 : sx > st.W - 60) && st.isLand(sx, sy));
+    if (!spot) continue;
+    const plan = decide(st, makeSplat({ x: spot[0], y: spot[1], R: 30, pigment: paint('van-dyke-brown'), hint: 'cabin' }));
+    if (plan[0].kind !== 'cabin') continue;
+    cabins++;
+    const cabin = plan[0].make();
+    const bush = plan[1].make(cabin);
+    off('a cabin’s bush', bush.meta.x, bush.meta.x);
+  }
+  for (let i = 0; i < 24; i++) {
+    st.newCanvas('golden-hour');
+    const plan = decide(st, makeSplat({ x: i % 2 ? 30 : st.W - 30, y: st.hy - st.H * 0.25, R: 50, pigment: paint('sap-green'), hint: 'mountain' }));
+    const hill = plan[0].make();
+    const trees = plan[1].make(hill);
+    off('a green mountain’s trees', trees.bbox.x + trees.bbox.w / 2, trees.bbox.x + trees.bbox.w / 2);
+  }
+  return { out, cabins };
+});
+assert.ok(outside.cabins >= 8, `only ${outside.cabins} cabins were built at the edge of a bank`);
+assert.deepEqual(outside.out, [], 'something was painted off the canvas');
+
 // A cabin's layer leaves room for its chimney smoke instead of cutting it off flat. At golden hour a cabin has its
 // lights on and smoke going from the start; on a misty morning, yellow on it does that. Nothing reaches the top edge.
 for (const mood of ['golden-hour', 'misty-morning']) {

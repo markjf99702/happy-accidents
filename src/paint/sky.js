@@ -86,11 +86,12 @@ export function sky(S) {
 }
 
 export function sun(S, p) {
-  const { scheme, hy } = S;
+  const { scheme, hy, W } = S;
   const moon = scheme.sunType === 'moon';
   const r = clamp(p.R * rand(0.9, 1.3), 18, 54);
-  const x = p.x;
-  const y = Math.min(p.y, hy - r * 1.6);
+  // Where the paint landed, but with the whole disc on the canvas and clear of the horizon.
+  const x = clamp(p.x, r * 1.3, W - r * 1.3);
+  const y = clamp(p.y, r * 1.3, hy - r * 1.6);
   const g = r * 5.5;
   const disc = p.body ?? scheme.sun;
   const halo = p.glow ?? scheme.sunGlow;

@@ -260,8 +260,11 @@ function greenMountain(S, b) {
       (prev) => {
         const m = prev.meta;
         const y = m.peak[1] + m.hgt * rand(0.45, 0.7);
-        const x = m.peak[0] + side * m.hgt * rand(0.35, 0.7);
-        return P.treeline(S, { ...b, x, y, baseY: y + 10, haze: 0.5, scale: 0.6, slope: side * 0.4, depth: prev.depth + 0.5, noGround: true, kind: 'foothills', tintAmt: 0.3 });
+        const reach = m.hgt * rand(0.35, 0.7);
+        // Up the other flank if this one runs off the canvas, so the trees can be seen.
+        const s = m.peak[0] + side * reach < 0 || m.peak[0] + side * reach > S.W ? -side : side;
+        const x = m.peak[0] + s * reach;
+        return P.treeline(S, { ...b, x, y, baseY: y + 10, haze: 0.5, scale: 0.6, slope: s * 0.4, depth: prev.depth + 0.5, noGround: true, kind: 'foothills', tintAmt: 0.3 });
       },
       { quiet: true },
     ),
@@ -437,7 +440,16 @@ function cabinSteps(S, b, c) {
   const leaf = c.fam === 'green' ? pal(S, LEAF.green) : undefined;
   return [
     step('cabin', () => P.cabin(S, { ...b, baseY: b.y, size, wall }), { say }),
-    step('bush', () => P.bush(S, { ...b, shape: null, x: b.x + bushSide * size * rand(0.55, 0.8), baseY: b.y + 2, r: size * 0.2, leaf }), { quiet: true }),
+    step(
+      'bush',
+      () => {
+        // On the shady side, unless that would put it off the canvas.
+        let x = b.x + bushSide * size * rand(0.55, 0.8);
+        if (x < size * 0.2 || x > S.W - size * 0.2) x = 2 * b.x - x;
+        return P.bush(S, { ...b, shape: null, x, baseY: b.y + 2, r: size * 0.2, leaf });
+      },
+      { quiet: true },
+    ),
   ];
 }
 
