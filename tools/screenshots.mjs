@@ -22,7 +22,10 @@ const server = createServer(async (req, res) => {
   res.end(body);
 }).listen(0);
 const base = `http://localhost:${server.address().port}/`;
-const SEED = 7;
+// The autumn painting from this seed is the one the README's alt text describes: two red maples and a pine on the left
+// bank, a pine and a blue spruce on the right, a sailboat and a canoe. The signed one uses the next seed. If the
+// painters change, look at what comes out and pick again.
+const SEED = 65;
 
 // Saves a screenshot with a 256-colour palette, which keeps these painterly pictures a fraction of the size.
 async function save(shot, path) {
