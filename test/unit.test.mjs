@@ -107,6 +107,13 @@ test('small helpers behave', () => {
   assert.equal(seen.size, 3);
 });
 
+test('the README says what each file is for', async () => {
+  const readme = await readFile(join(root, 'README.md'), 'utf8');
+  const list = readme.slice(readme.indexOf('### Files'));
+  const code = (await readdir(join(root, 'src'), { withFileTypes: true })).filter((e) => e.isFile()).map((e) => `src/${e.name}`);
+  for (const f of [...code, 'src/paint/', 'fonts/', 'sw.js', 'carry.js']) assert.ok(list.includes(`- \`${f}\`:`), `the README's Files list leaves out ${f}`);
+});
+
 test('the offline copy lists every file the page needs', async () => {
   const sw = await readFile(join(root, 'sw.js'), 'utf8');
   const listed = new Set([...sw.matchAll(/'([^']+\.(?:js|css|woff2|svg|html|webmanifest))'/g)].map((m) => m[1]));

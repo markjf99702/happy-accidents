@@ -74,17 +74,21 @@ To put it online with GitHub Pages: **Settings → Pages → Build and deploymen
 
 It's Canvas 2D with no framework and no image files: everything on the canvas is painted in code.
 
+- `src/main.js`: the page itself: the palette, taps, flicks and holds on the canvas, the buttons and keys, signing, and the gallery wall.
 - `src/brush.js`: the brush engine. A stroke is many thin bristle lines, each with its own color wobble, opacity and dry-brush breaks. Knife pulls, taps and scrubs are built from it.
 - `src/splat.js`: the accident itself: a glossy blob with wobble, spikes and flung droplets, and its outline in canvas coordinates (a union, when wet splats run together).
 - `src/shape.js`: turns that outline into silhouettes: top edges, side profiles, clumps.
 - `src/color.js`: color helpers, including how paints mix (yellow and blue make green) and which family a mixed color belongs to.
+- `src/schemes.js`: the ten paints on the palette, and the six moods a canvas can have, each with its own sky, water, mountain and tree colors.
 - `src/decide.js`: reads a splat and returns a plan, such as land and then a tree on it. It checks what's already painted under the splat first, pixel by pixel, and reacts to that; otherwise the paint's color and where it landed pick what it becomes.
 - `src/paint/`: one painter per thing, plus `react.js` for changes to things already there. Each returns a bounding box, a depth and a list of small drawing steps played back over a second or two, so you watch it being painted.
 - `src/studio.js`: the scene. Every element paints into its own layer, composited back to front by depth. The lake is a mirrored, rippled copy of everything above the horizon.
 - `src/words.js`: what the painter says, the brushes and paints they name, and titles like *Cabin at Otter Cove*.
 - `src/sound.js`: optional sounds, made with Web Audio from soft pink noise: the damp pat of a splat on canvas and the swish of a brush (off by default).
+- `src/util.js`: small helpers for the randomness: picks, weighted choices, and lines that don't come round again too soon.
 - `fonts/`: Caprasimo, Figtree and Mrs Saint Delafield (SIL Open Font License), served from here so nothing loads from elsewhere.
 - `sw.js`: keeps a copy for painting offline. `npm test` checks that it lists every file the page needs.
+- `carry.js`: the first time the game opens at happy-accidents.junkdrawer.works, brings over the paintings and settings saved at its old address, junkdrawer.works/happy-accidents.
 - `tools/`: the screenshot and icon scripts above. `scripts/build.mjs`: the single-file build.
 
 The studio is on `window.happyAccidents` if you want to play from the console:
