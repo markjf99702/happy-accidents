@@ -576,7 +576,8 @@ export class Studio {
     this.elements = this.elements.filter((e) => e.kind !== 'signature');
     this.counts.signature = 0;
     const el = this.addElement(signature(this, name));
-    this.signed = { name, at: Date.now() };
+    // How many accidents it had when signed: paint added after that isn't on the gallery wall.
+    this.signed = { name, at: Date.now(), accidents: this.accidents };
     return new Promise((resolve) => {
       el.onDone = () => resolve();
     });

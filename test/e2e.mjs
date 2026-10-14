@@ -224,6 +224,14 @@ assert.match(await page.textContent('#plNote'), /happy accidents/);
 await page.click('#keepBtn');
 assert.equal(await page.textContent('#galleryCount'), '1');
 
+// Paint added after signing isn't on the wall, so New canvas asks first.
+await page.click('#oopsBtn');
+await page.waitForTimeout(200);
+await settle();
+await page.click('#newBtn');
+assert.equal(await page.textContent('#newBtn'), 'Start over?', 'New canvas asks first when paint was added after signing');
+assert.equal(await page.textContent('#canvasNo'), canvasNo, 'the first tap of New canvas kept the painting');
+
 // The gallery survives a reload.
 await page.reload();
 await page.evaluate(() => document.fonts.ready);

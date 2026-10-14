@@ -301,7 +301,8 @@ let newArmed = null;
 const newBtn = $('newBtn');
 function newCanvas() {
   if (signing) return;
-  const unsaved = studio.accidents > 0 && !studio.signed;
+  // Paint that isn't on the gallery wall: all of it on an unsigned canvas, or whatever was added since signing.
+  const unsaved = studio.accidents > (studio.signed?.accidents ?? 0);
   if (unsaved && !newArmed) {
     newBtn.textContent = 'Start over?';
     newArmed = setTimeout(() => {
