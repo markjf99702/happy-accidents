@@ -195,11 +195,28 @@ assert.equal(await S(() => document.activeElement.id), 'artistName', 'with no na
 assert.deepEqual(await S(() => window.typed), [], 'pressing S typed into the sign form');
 await page.keyboard.press('Escape');
 
-// Sign it: the label shows and the painting goes up in the gallery.
+// Sign it: the label shows and the painting goes up in the gallery. A splat still wet when you sign gets painted in
+// before the painting is framed, and until then New canvas, Sign it and Let it happen wait, from the buttons or the keys.
+await S(async () => {
+  const { PIGMENTS } = await import('./src/schemes.js');
+  const st = window.happyAccidents;
+  st.addSplat({ x: st.W * 0.7, y: st.hy * 0.3, R: 20, pigment: PIGMENTS[0], delay: 2500 });
+});
 await page.click('#signBtn');
 await page.fill('#artistName', 'Robin');
 await page.fill('#artTitle', 'Test Pattern at Otter Cove');
 await page.click('#signForm button[type=submit]');
+const canvasNo = await page.textContent('#canvasNo');
+await page.click('#newBtn');
+assert.equal(await page.textContent('#canvasNo'), canvasNo, 'New canvas waits while the painting is being signed');
+await page.click('#signBtn');
+assert.equal(await page.isHidden('#signSheet'), true, 'Sign it waits while the painting is being signed');
+await page.click('#autoBtn');
+assert.equal(await page.getAttribute('#autoBtn', 'aria-pressed'), 'false', 'Let it happen waits while the painting is being signed');
+for (const key of ['n', 's', 'a']) await page.keyboard.press(key);
+assert.equal(await page.textContent('#canvasNo'), canvasNo, 'N waits while the painting is being signed');
+assert.equal(await page.isHidden('#signSheet'), true, 'S waits while the painting is being signed');
+assert.equal(await page.getAttribute('#autoBtn', 'aria-pressed'), 'false', 'A waits while the painting is being signed');
 await page.waitForSelector('#placard:not([hidden])', { timeout: 15000 });
 assert.equal(await page.textContent('#plTitle'), 'Test Pattern at Otter Cove');
 assert.equal(await page.textContent('#plArtist'), 'Robin');

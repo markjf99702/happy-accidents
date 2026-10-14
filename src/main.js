@@ -268,9 +268,14 @@ function oops() {
   studio.randomAccident({ pigment: accidentPigment() });
 }
 
+// True from Sign it in the sign form until the label is up: the signature is going on and the painting is about to
+// be framed, so starting over, signing again or letting more accidents happen waits until then.
+let signing = false;
+
 let autoTimer = null;
 const autoBtn = $('autoBtn');
 function setAuto(on) {
+  if (on && signing) return;
   clearTimeout(autoTimer);
   autoTimer = null;
   autoBtn.setAttribute('aria-pressed', String(on));
@@ -295,6 +300,7 @@ function tickAuto(delay) {
 let newArmed = null;
 const newBtn = $('newBtn');
 function newCanvas() {
+  if (signing) return;
   const unsaved = studio.accidents > 0 && !studio.signed;
   if (unsaved && !newArmed) {
     newBtn.textContent = 'Start over?';
@@ -353,6 +359,7 @@ const artistName = $('artistName');
 const artTitle = $('artTitle');
 
 function openSign() {
+  if (signing) return;
   setAuto(false);
   userActed();
   artistName.value = store.get(KEY.name, '');
@@ -367,31 +374,37 @@ $('cancelSign').addEventListener('click', () => closeOverlay($('signSheet')));
 
 $('signForm').addEventListener('submit', async (e) => {
   e.preventDefault();
-  const name = artistName.value.trim() || 'Anonymous';
-  const title = artTitle.value.trim() || makeTitle(studio.counts, studio.scheme.id);
-  store.set(KEY.name, name);
-  $('signSheet').hidden = true;
-  narrate({ line: line('signature'), info: 'Liner brush · Bright Red' });
-  await studio.sign(name);
-  // Let anything still being painted finish before we frame it.
-  for (let i = 0; i < 40 && studio.busy; i++) await new Promise((r) => setTimeout(r, 100));
-  const s = studio.summary();
-  const full = studio.snapshot(studio.W * studio.k, 'image/jpeg', 0.92);
-  const record = {
-    id: `${Date.now().toString(36)}${Math.floor(Math.random() * 1e4).toString(36)}`,
-    title,
-    artist: name,
-    year: new Date().getFullYear(),
-    date: new Date().toISOString(),
-    img: studio.snapshot(720, 'image/jpeg', 0.85),
-    accidents: s.accidents,
-    seconds: s.seconds,
-    scheme: s.scheme.name,
-    number: s.number,
-    features: featureLine(s.counts),
-  };
-  hang(record);
-  showPlacard(record, full);
+  if (signing) return;
+  signing = true;
+  try {
+    const name = artistName.value.trim() || 'Anonymous';
+    const title = artTitle.value.trim() || makeTitle(studio.counts, studio.scheme.id);
+    store.set(KEY.name, name);
+    $('signSheet').hidden = true;
+    narrate({ line: line('signature'), info: 'Liner brush · Bright Red' });
+    await studio.sign(name);
+    // Let anything still being painted finish before we frame it.
+    for (let i = 0; i < 40 && studio.busy; i++) await new Promise((r) => setTimeout(r, 100));
+    const s = studio.summary();
+    const full = studio.snapshot(studio.W * studio.k, 'image/jpeg', 0.92);
+    const record = {
+      id: `${Date.now().toString(36)}${Math.floor(Math.random() * 1e4).toString(36)}`,
+      title,
+      artist: name,
+      year: new Date().getFullYear(),
+      date: new Date().toISOString(),
+      img: studio.snapshot(720, 'image/jpeg', 0.85),
+      accidents: s.accidents,
+      seconds: s.seconds,
+      scheme: s.scheme.name,
+      number: s.number,
+      features: featureLine(s.counts),
+    };
+    hang(record);
+    showPlacard(record, full);
+  } finally {
+    signing = false;
+  }
 });
 
 function slug(text) {
