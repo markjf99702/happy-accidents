@@ -297,6 +297,26 @@ await page.keyboard.press('s');
 assert.equal(await page.inputValue('#artistName'), '', 'a stored name that isn’t text stays out of the name field');
 await page.keyboard.press('Escape');
 
+// With sound saved on, nothing tries to start audio before the first tap or key (the browser refuses and says so in
+// the console); the first tap starts it.
+const audioComplaints = [];
+page.on('console', (m) => { if (/AudioContext/.test(m.text())) audioComplaints.push(m.text()); });
+await ctx.addInitScript(() => {
+  const Real = window.AudioContext;
+  if (Real) window.AudioContext = class extends Real { constructor(...args) { super(...args); (window.audioContexts ||= []).push(this); } };
+});
+await S(() => localStorage.setItem('happy-accidents:sound', 'true'));
+await page.reload();
+await page.evaluate(() => document.fonts.ready);
+assert.equal(await page.textContent('#soundBtn'), 'Sound on');
+await S(() => window.happyAccidents.randomAccident());
+await page.waitForTimeout(500);
+assert.equal(await S(() => (window.audioContexts || []).length), 0, 'audio was started before a tap or a key');
+assert.deepEqual(audioComplaints, [], 'the console complained about audio');
+b = await box();
+await page.touchscreen.tap(b.x + b.width * 0.5, b.y + b.height * 0.3);
+await page.waitForFunction(() => window.audioContexts?.[0]?.state === 'running', null, { timeout: 10000 });
+
 // Works offline once it has been opened.
 await page.waitForFunction(() => navigator.serviceWorker && navigator.serviceWorker.controller, null, { timeout: 15000 });
 await ctx.setOffline(true);

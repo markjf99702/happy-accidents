@@ -596,6 +596,8 @@ if ('serviceWorker' in navigator && !inFrame && location.protocol.startsWith('ht
 }
 
 window.addEventListener('pointerdown', sound.wake, true);
+// By the standard (and in Safari), a touch only lets audio start once the finger lifts, so the very first tap needs this.
+window.addEventListener('pointerup', sound.wake, true);
 window.addEventListener('keydown', sound.wake, true);
 
 setSound(store.get(KEY.sound, false) === true);

@@ -6,6 +6,10 @@ let master = null;
 let pink = null;
 let enabled = false;
 
+// Browsers only let audio start once the page has had a tap or a key press; a context made before that stays silent
+// and complains in the console. So it's made in wake(), on the first one, never at load.
+const mayStart = () => navigator.userActivation?.hasBeenActive ?? true;
+
 function ensure() {
   if (ac) return true;
   const Ctx = window.AudioContext || window.webkitAudioContext;
@@ -43,16 +47,19 @@ function ensure() {
   return true;
 }
 
+// Turned on with the Sound button or M, that tap or key starts it right away. Turned on at load (it was on last
+// time), it waits for the first tap or key.
 export function setSound(on) {
   enabled = on;
-  if (on && ensure() && ac.state === 'suspended') ac.resume();
+  if (on) wake();
 }
 
 export const soundOn = () => enabled;
 
-// Browsers only start audio from a user gesture; call this from one.
+// Called on every tap and key press.
 export function wake() {
-  if (enabled && ac && ac.state === 'suspended') ac.resume();
+  if (!enabled || !mayStart() || !ensure()) return;
+  if (ac.state === 'suspended') ac.resume();
 }
 
 function noise(t, stop, loop = false) {
@@ -75,7 +82,7 @@ function filter(type, freq, q) {
 // Paint landing on stretched canvas: a soft, muffled pat, the canvas giving a little underneath,
 // and a quiet wet spread. Bigger splats are lower and a touch longer.
 export function splat(size = 20) {
-  if (!enabled || !ensure()) return;
+  if (!enabled || !ac) return;
   const t = ac.currentTime + 0.005;
   const big = Math.min(1, size / 50);
   const vary = 0.9 + Math.random() * 0.2;
@@ -122,7 +129,7 @@ const KNIFE = new Set(['mountain', 'rock', 'cabin', 'snowfall', 'rockSnow', 'roo
 // A brush on canvas: soft swishes that swell in and ease out, one per stroke, with the tone
 // rising and falling a little as the bristles drag.
 export function brush(kind, ms) {
-  if (!enabled || !ensure() || kind === 'signature') return;
+  if (!enabled || !ac || kind === 'signature') return;
   const t = ac.currentTime + 0.01;
   const dur = Math.min(2.6, ms / 1000);
   const knife = KNIFE.has(kind);
