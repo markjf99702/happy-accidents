@@ -370,7 +370,8 @@ function openSign() {
   if (signing) return;
   setAuto(false);
   userActed();
-  artistName.value = store.get(KEY.name, '');
+  const saved = store.get(KEY.name, '');
+  artistName.value = typeof saved === 'string' ? saved : '';
   artTitle.value = makeTitle(studio.counts, studio.scheme.id);
   openOverlay($('signSheet'), artistName.value ? artTitle : artistName);
 }
@@ -473,7 +474,8 @@ $('keepBtn').addEventListener('click', () => closeOverlay($('placard')));
 
 function readGallery() {
   const list = store.get(KEY.gallery, []);
-  return Array.isArray(list) ? list : [];
+  // Every painting this has hung has its picture with it; anything else that got in (a hand edit, a bad write) is skipped.
+  return Array.isArray(list) ? list.filter((r) => r && typeof r === 'object' && typeof r.img === 'string') : [];
 }
 
 function hang(record) {

@@ -272,6 +272,24 @@ assert.equal(await page.isHidden('#gallery'), true);
 await page.keyboard.press('Escape');
 assert.equal(await S(() => document.activeElement.id), 'galleryBtn', 'closing a painting opened from the wall goes back to Gallery');
 
+// Junk in storage (a hand edit, a bad write) doesn't stop the wall opening or hang as a broken painting, and a stored
+// name that isn't text stays out of the name field.
+await S(() => {
+  const hung = JSON.parse(localStorage.getItem('happy-accidents:gallery'));
+  localStorage.setItem('happy-accidents:gallery', JSON.stringify([null, 1, 'x', {}, ...hung]));
+  localStorage.setItem('happy-accidents:artist', '{"x":1}');
+});
+await page.reload();
+await page.evaluate(() => document.fonts.ready);
+assert.equal(await page.textContent('#galleryCount'), '1', 'junk in storage counted as paintings');
+await page.keyboard.press('g');
+assert.equal(await page.isHidden('#gallery'), false, 'the gallery opens with junk in storage');
+assert.equal(await page.locator('.wall-item').count(), 1, 'only the real painting hangs');
+await page.keyboard.press('Escape');
+await page.keyboard.press('s');
+assert.equal(await page.inputValue('#artistName'), '', 'a stored name that isn’t text stays out of the name field');
+await page.keyboard.press('Escape');
+
 // Works offline once it has been opened.
 await page.waitForFunction(() => navigator.serviceWorker && navigator.serviceWorker.controller, null, { timeout: 15000 });
 await ctx.setOffline(true);
