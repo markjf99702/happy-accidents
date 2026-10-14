@@ -3,9 +3,9 @@ import { pick, pickFresh } from './util.js';
 
 export const LINES = {
   wash: [
-    "Let's put a little color on this canvas and see what shows up.",
-    "Thin and wet. Everything moves easier when it's wet.",
-    "Criss-cross, criss-cross. We're just getting the sky started.",
+    'Let’s put a little color on this canvas and see what shows up.',
+    'Thin and wet. Everything moves easier when it’s wet.',
+    'Criss-cross, criss-cross. We’re just getting the sky started.',
   ],
   cloud: [
     'That one wants to float. We’ll let it be a cloud.',

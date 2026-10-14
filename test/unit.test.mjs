@@ -46,6 +46,12 @@ test('the painter names the brush and a touch of the paint you used', () => {
   for (const [key, lines] of Object.entries(LINES)) assert.ok(lines.length > 0, `no lines for ${key}`);
 });
 
+test('the painter’s lines use curly apostrophes, like the rest of the page', () => {
+  for (const [key, lines] of Object.entries(LINES)) {
+    for (const text of lines) assert.doesNotMatch(text, /'/, `${key}: ${text}`);
+  }
+});
+
 test('a splat outline turns into a silhouette', () => {
   // A circle of radius 10 centered at (50, 50).
   const circle = Array.from({ length: 72 }, (_, i) => [50 + Math.cos((i / 72) * Math.PI * 2) * 10, 50 + Math.sin((i / 72) * Math.PI * 2) * 10]);
