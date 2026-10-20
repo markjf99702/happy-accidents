@@ -126,7 +126,7 @@ test('the gallery wall says how many paintings it keeps', async () => {
   const html = await readFile(join(root, 'index.html'), 'utf8');
   const cap = main.match(/\[record, \.\.\.readGallery\(\)\]\.slice\(0, (\d+)\)/)?.[1];
   assert.ok(cap, 'main.js keeps the wall to some other number of paintings now');
-  assert.match(html, new RegExp(`keeps your last ${cap} paintings`), `the wall doesn't say it keeps ${cap} paintings`);
+  assert.match(html, new RegExp(`keeps your ${cap} newest paintings`), `the wall doesn't say it keeps ${cap} paintings`);
 });
 
 test('the screenshot tool starts its random numbers again before each painting', async () => {
