@@ -514,7 +514,12 @@ assert.equal(await page.locator('.wall-item').count(), 1, 'only the real paintin
 await page.keyboard.press('Escape');
 await page.keyboard.press('s');
 assert.equal(await page.inputValue('#artistName'), '', 'a stored name that isn’t text stays out of the name field');
-await page.keyboard.press('Escape');
+
+// Left blank, the name signs as Anonymous, as the field's placeholder says, instead of the form refusing to send.
+await page.click('#signForm button[type=submit]');
+await page.waitForSelector('#placard:not([hidden])', { timeout: 30000 });
+assert.equal(await page.textContent('#plArtist'), 'Anonymous', 'a blank name didn’t sign as Anonymous');
+await page.click('#keepBtn');
 
 // With sound saved on, nothing tries to start audio before the first tap or key (the browser refuses and says so in
 // the console); the first tap starts it.
