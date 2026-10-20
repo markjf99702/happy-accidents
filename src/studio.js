@@ -4,7 +4,7 @@ import { SCHEMES, PIGMENTS, pickScheme } from './schemes.js';
 import { TAU, rand, clamp, chance, pick, weighted } from './util.js';
 import { rgba, darken, mix, mixPaint, familyOf, colorName } from './color.js';
 import { makeSplat, renderSplat } from './splat.js';
-import { decide } from './decide.js';
+import { decide, earthy } from './decide.js';
 import { sky, signature, SIGNATURE_FONT } from './paint/index.js';
 import { bristle, linePts } from './brush.js';
 import { line, toolInfo, mixLine } from './words.js';
@@ -37,6 +37,8 @@ const FITS = {
   blue: ['mountain', 'birds', 'treeline', 'tree', 'water', 'cloud'],
   brown: ['mountain', 'birds', 'bank', 'cabin', 'cloud', 'tree'],
 };
+// Yellow Ochre makes land, so it can be aimed at the shore as well; the brighter yellows can't.
+const fitsFor = (pigment) => (earthy(pigment) ? [...FITS.yellow, 'bank'] : FITS[pigment.family]);
 
 // Things a splat can land on without touching them: the sky itself, light, weather and small marks.
 const SEE_THROUGH = new Set(['sky', 'sunpath', 'signature', 'mist', 'aurora', 'stars', 'birds', 'ripples', 'rain', 'foothills', 'waterfall', 'flowers']);
@@ -490,7 +492,7 @@ export class Studio {
       if (spot) return this.addSplat({ ...motion, pigment: opts.pigment ?? pick(PIGMENTS), ...spot });
     }
 
-    const fits = opts.pigment ? FITS[opts.pigment.family] : null;
+    const fits = opts.pigment ? fitsFor(opts.pigment) : null;
     let hint = opts.hint ?? this.pickHint(fits);
     let spot = null;
     // Otherwise look for open space, so the painting keeps growing.

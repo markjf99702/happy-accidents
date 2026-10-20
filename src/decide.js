@@ -12,6 +12,9 @@ import * as R from './paint/react.js';
 
 const step = (kind, make, extra = {}) => ({ kind, make, ...extra });
 
+// Earthy yellows (ochre) make ground, the way greens and browns do; brighter yellows don't.
+export const earthy = (pigment) => pigment.family === 'yellow' && hsl(pigment.rgb).s < 0.7;
+
 const WHITE = [255, 255, 255];
 
 // Leaf colors for each paint, darkest to lightest.
@@ -37,7 +40,7 @@ export function decide(S, sp) {
   const b = { x: center.x, y: center.y, R: sp.effR || sp.R, tint: pigment.rgb, elong: sp.stretch, shape: splatShape(sp) };
   // The paint as it is now, mixed or not. Earthy yellows (ochre) make ground; very dark blues (Prussian) carry rain.
   const c = { fam: pigment.family, rgb: pigment.rgb };
-  c.earthy = c.fam === 'yellow' && hsl(c.rgb).s < 0.7;
+  c.earthy = earthy(pigment);
   c.stormy = c.fam === 'blue' && lum(c.rgb) < 0.2;
   const hint = sp.hint;
   const vertical = Math.abs(Math.sin(sp.ang)) > 0.7 && sp.stretch > 1.35;

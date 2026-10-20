@@ -288,6 +288,21 @@ assert.ok(kinds.includes('treeSnow') || kinds.includes('deciduous'), `white on l
 kinds = await paintWith('phthalo-blue', 'land', 30, 'tree');
 assert.ok(kinds.includes('evergreen'), `blue on land is a blue spruce (${kinds})`);
 
+// Let it happen aims the loaded paint where it makes sense. Yellow Ochre makes land, so some of its accidents go to the
+// shore; Cadmium Yellow doesn't, so none of its do.
+const aimed = await S(async () => {
+  const { PIGMENTS } = await import('./src/schemes.js');
+  const st = window.happyAccidents;
+  const hints = (id) =>
+    Array.from({ length: 30 }, () => {
+      st.newCanvas('golden-hour');
+      return st.randomAccident({ pigment: PIGMENTS.find((p) => p.id === id) }).hint;
+    });
+  return { ochre: hints('yellow-ochre'), cadmium: hints('cadmium-yellow') };
+});
+assert.ok(aimed.ochre.includes('bank'), `Let it happen never aimed Yellow Ochre at the shore (${aimed.ochre})`);
+assert.ok(!aimed.cadmium.includes('bank'), `Let it happen aimed Cadmium Yellow at the shore (${aimed.cadmium})`);
+
 // Things painted near the edges stay on the canvas: the sun or moon from paint at the very top, the bush beside a
 // cabin built at the edge of a bank, and the trees climbing a green mountain near a side.
 const outside = await S(async () => {
