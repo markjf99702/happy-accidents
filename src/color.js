@@ -11,6 +11,13 @@ export const lighten = (c, t) => mix(c, [255, 255, 255], t);
 export const rgba = (c, a = 1) => `rgba(${c[0] | 0},${c[1] | 0},${c[2] | 0},${a})`;
 export const lum = (c) => (0.2126 * c[0] + 0.7152 * c[1] + 0.0722 * c[2]) / 255;
 
+// Bright paint is toned down to suit the light: at night everything sits in shadow, and at dusk a little. It goes toward
+// the darkest tree color, or toward the color given (light on a cloud's edges goes toward the cloud's own light).
+export function dim(S, col, toward = S.scheme.tree.dark) {
+  const k = S.scheme.night ? 0.55 : S.scheme.id === 'violet-dusk' ? 0.3 : 0;
+  return k ? mix(col, toward, k) : col;
+}
+
 export function jitter(c, amt) {
   const j = amt * 255;
   return [

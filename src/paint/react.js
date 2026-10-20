@@ -3,7 +3,7 @@
 // source-atop, so the new paint only sticks where there was paint before: snow settles
 // on the needles, not the sky between them.
 import { rand, chance, clamp, gauss } from '../util.js';
-import { rgba, mix, jitter, darken, lighten, hex } from '../color.js';
+import { rgba, mix, jitter, darken, lighten, hex, dim } from '../color.js';
 import { bristle, linePts, knife, soft, mistAtop, pathOf } from '../brush.js';
 import { fanTap, leafPass } from './trees.js';
 
@@ -55,7 +55,7 @@ export function treeSnow(S, t, p) {
 export function treeGlow(S, t, p) {
   const m = t.meta;
   const L = S.lightDir;
-  const warm = lighten(mix(p.tint, hex('#ffd27a'), 0.45), 0.25);
+  const warm = dim(S, lighten(mix(p.tint, hex('#ffd27a'), 0.45), 0.25));
   const ops = [];
   if (m.tiers) {
     for (let i = 0; i < m.tiers.length; i += 3) {
@@ -80,7 +80,7 @@ export function treeGlow(S, t, p) {
 export function autumn(S, t, p) {
   const m = t.meta;
   const L = S.lightDir;
-  const leaf = AUTUMN.map((c) => mix(c, p.tint, 0.3));
+  const leaf = AUTUMN.map((c) => dim(S, mix(c, p.tint, 0.3)));
   const lit = (dx, dy, r) => dx * L - dy > r * 0.05;
   const edge = (dx, dy, r) => dx * L - dy > r * 0.5;
   const ops = [];
@@ -325,10 +325,11 @@ export function rain(S, t) {
   return { kind: 'rain', depth: t.depth + 0.1, reflect: true, bbox: { x: x0 - spread - 10, y: top - 4, w: x1 - x0 + spread * 2 + 20, h: bottom - top + 8 }, ops, dur: 1500 };
 }
 
-// Warm paint on a cloud: its edges catch the light.
+// Warm paint on a cloud: its edges catch the light. At night and dusk that light is toned down toward the cloud's own
+// rather than into the dark, so it's still lighter than the cloud.
 export function sunlitCloud(S, t, p) {
   const m = t.meta;
-  const warm = lighten(mix(p.tint, S.scheme.glow, 0.5), 0.3);
+  const warm = dim(S, lighten(mix(p.tint, S.scheme.glow, 0.5), 0.3), m.light);
   const la = -Math.PI / 2 + S.lightDir * (Math.PI / 4);
   const ops = m.puffs.map((pf) => (ctx) =>
     atop(ctx, () => {

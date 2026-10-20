@@ -11,18 +11,22 @@ import { weighted, pickFresh, clamp } from '../src/util.js';
 import { SCHEMES, PIGMENTS } from '../src/schemes.js';
 import { decide } from '../src/decide.js';
 import { makeSplat } from '../src/splat.js';
+import { flowers, canoe, glints } from '../src/paint/index.js';
+import { autumn, treeGlow, sunlitCloud } from '../src/paint/react.js';
 
 const root = join(dirname(fileURLToPath(import.meta.url)), '..');
 
 // Just enough of a studio to ask decide() what a splat becomes: ground everywhere below the horizon, nothing painted yet.
 function bareStudio(schemeId = 'golden-hour') {
   const reserved = new Set();
+  const scheme = SCHEMES.find((s) => s.id === schemeId);
   return {
     W: 1200,
     H: 900,
     hy: 480,
     lightDir: 1,
-    scheme: SCHEMES.find((s) => s.id === schemeId),
+    scheme,
+    haze: scheme.haze,
     elementAt: () => null,
     isLand: (x, y) => y > 480,
     has: (kind) => reserved.has(kind),
@@ -89,6 +93,86 @@ test('an ordinary brown tap on land can be a cabin', () => {
   const cabins = Array.from({ length: 60 }, (_, i) => becomes(15 + (i % 3))).filter((k) => k === 'cabin').length;
   assert.ok(cabins >= 15, `only ${cabins} of 60 brown taps of R 15 to 17 made a cabin`);
   for (let i = 0; i < 30; i++) assert.notEqual(becomes(14.5), 'cabin', 'a brown tap smaller than R 15 made a cabin');
+});
+
+// Plays a painter's steps on a context that draws nothing and keeps every color it's handed, as [r, g, b].
+function colorsOf(spec) {
+  const colors = [];
+  const keep = (c) => {
+    const m = typeof c === 'string' && c.match(/^rgba?\(([\d.]+),\s*([\d.]+),\s*([\d.]+)/);
+    if (m) colors.push(m.slice(1, 4).map(Number));
+  };
+  const gradient = { addColorStop: (at, c) => keep(c) };
+  const ctx = new Proxy(
+    {},
+    {
+      get: (t, k) => (k in t ? t[k] : typeof k === 'string' && k.startsWith('create') ? () => gradient : () => {}),
+      set: (t, k, v) => {
+        if (k === 'fillStyle' || k === 'strokeStyle') keep(v);
+        t[k] = v;
+        return true;
+      },
+    },
+  );
+  for (const op of spec.ops) op(ctx);
+  return colors;
+}
+
+// Runs fn with Math.random started from the same seed every time, so two runs make the same choices.
+function sameDice(fn) {
+  const real = Math.random;
+  let a = 7;
+  Math.random = () => {
+    a = (a + 0x6d2b79f5) | 0;
+    let t = Math.imul(a ^ (a >>> 15), 1 | a);
+    t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
+    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+  };
+  try {
+    return fn();
+  } finally {
+    Math.random = real;
+  }
+}
+
+test('at night and dusk, what paint adds sits in the shade like everything else', () => {
+  // Each touch is painted twice from the same random numbers: in the mood itself, and in a copy of the mood that isn't
+  // dimmed. The colors that differ are the ones that came from the paint, and each went toward the shade: the darkest
+  // tree color, or for light on a cloud's edges, the cloud's own light (into the dark, it looked like grime).
+  const dist = (a, b) => Math.hypot(a[0] - b[0], a[1] - b[1], a[2] - b[2]);
+  const paint = (id) => PIGMENTS.find((p) => p.id === id).rgb;
+  const make = (S, x, y, R, id, hint) => decide(S, makeSplat({ x, y, R, pigment: PIGMENTS.find((p) => p.id === id), hint }))[0].make();
+  for (const mood of ['northern-night', 'violet-dusk']) {
+    const S = bareStudio(mood);
+    const plain = { ...S, scheme: { ...S.scheme, id: 'not-dimmed', night: false } };
+    const ground = S.hy + 150;
+    const pine = make(S, 300, ground, 30, 'phthalo-blue', 'tree');
+    const leafy = make(S, 500, ground, 30, 'cadmium-yellow', 'tree');
+    const cloud = make(S, 600, S.hy * 0.3, 30, 'titanium-white', 'cloud');
+    const hit = (id) => ({ x: 600, y: ground, R: 18, tint: paint(id) });
+    const dark = S.scheme.tree.dark;
+    const touches = {
+      'autumn leaves': [(s) => autumn(s, leafy, hit('bright-red')), dark],
+      'late light on a pine': [(s) => treeGlow(s, pine, hit('cadmium-yellow')), dark],
+      'a cloud’s lit edges': [(s) => sunlitCloud(s, cloud, hit('cadmium-yellow')), cloud.meta.light],
+      flowers: [(s) => flowers(s, { x: 700, y: ground, R: 10, tint: paint('cadmium-yellow') }), dark],
+      'a canoe': [(s) => canoe(s, { x: 600, y: S.hy + 100, R: 20, tint: paint('bright-red') }), dark],
+      glints: [(s) => glints(s, { x: 600, y: S.hy + 80, R: 20, tint: paint('cadmium-yellow') }), dark],
+    };
+    for (const [what, [paintIt, toward]] of Object.entries(touches)) {
+      const shaded = sameDice(() => colorsOf(paintIt(S)));
+      const bright = sameDice(() => colorsOf(paintIt(plain)));
+      assert.equal(shaded.length, bright.length, `${what} at ${mood} painted differently`);
+      const changed = shaded.map((c, i) => [c, bright[i]]).filter(([a, b]) => dist(a, b) > 1);
+      assert.ok(changed.length > 0, `at ${mood}, ${what} kept the colors of daylight`);
+      for (const [a, b] of changed) assert.ok(dist(a, toward) < dist(b, toward), `at ${mood}, ${what} went from ${b} to ${a}, out of the shade`);
+    }
+    // A warm cloud's shadow too, not just its light.
+    for (const id of ['cadmium-yellow', 'bright-red']) {
+      const shadow = (s) => make(s, 600, s.hy * 0.3, 30, id, 'cloud').meta.shadow;
+      assert.ok(dist(shadow(S), dark) < dist(shadow(plain), dark), `at ${mood}, a ${id} cloud’s shadow kept the colors of daylight`);
+    }
+  }
 });
 
 test('a splat outline turns into a silhouette', () => {

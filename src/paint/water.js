@@ -1,6 +1,6 @@
 // Things that sit on or in the lake: rocks, ripples and the sparkle path under the sun.
 import { rand, randi, chance, clamp } from '../util.js';
-import { rgba, mix, darken, lighten, jitter } from '../color.js';
+import { rgba, mix, darken, lighten, jitter, dim } from '../color.js';
 import { knife, tap, pathOf, bristle, linePts } from '../brush.js';
 import { topEdge, heights, at } from '../shape.js';
 
@@ -206,7 +206,7 @@ export function canoe(S, p) {
   const { scheme, hy } = S;
   const s = clamp((p.y - hy) * 0.32 + p.R * 0.6, 12, 150);
   const { x, y } = p;
-  const body = mix(p.tint, [200, 40, 30], 0.3);
+  const body = dim(S, mix(p.tint, [200, 40, 30], 0.3));
   const lit = lighten(body, 0.3);
   const inside = darken(body, 0.55);
   const tilt = rand(-0.06, 0.06);
@@ -253,7 +253,7 @@ export function glints(S, p) {
   const dT = clamp((p.y - hy) / (H - hy), 0, 1);
   const w = clamp(p.R * 5, 40, 260) * (0.5 + dT);
   const h = w * 0.25;
-  const col = lighten(p.tint, 0.45);
+  const col = dim(S, lighten(p.tint, 0.45));
   const ops = [];
   ops.push((ctx) => {
     ctx.save();

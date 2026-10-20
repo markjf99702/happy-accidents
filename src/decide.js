@@ -5,7 +5,7 @@
 // Returns a plan: a list of steps, each of which builds one painted element (or paints onto
 // an existing one) when its turn comes.
 import { chance, clamp, rand, weighted, pick } from './util.js';
-import { hex, mix, lighten, darken, lum, hsl } from './color.js';
+import { hex, mix, lighten, darken, lum, hsl, dim } from './color.js';
 import { splatShape } from './splat.js';
 import * as P from './paint/index.js';
 import * as R from './paint/react.js';
@@ -210,9 +210,9 @@ function cloudLook(S, c) {
     case 'white':
       return { light: mix(cloud.light, WHITE, night ? 0.3 : 0.5), shadow: mix(cloud.shadow, cloud.light, 0.25) };
     case 'yellow':
-      return { light: dim(S, mix(cloud.light, lighten(rgb, 0.35), 0.55)), shadow: mix(cloud.shadow, rgb, 0.3) };
+      return { light: dim(S, mix(cloud.light, lighten(rgb, 0.35), 0.55)), shadow: dim(S, mix(cloud.shadow, rgb, 0.3)) };
     case 'red':
-      return { light: dim(S, mix(cloud.light, lighten(rgb, 0.5), 0.5)), shadow: mix(cloud.shadow, rgb, 0.45) };
+      return { light: dim(S, mix(cloud.light, lighten(rgb, 0.5), 0.5)), shadow: dim(S, mix(cloud.shadow, rgb, 0.45)) };
     case 'blue':
       return { light: dim(S, mix(cloud.light, mix(lighten(rgb, 0.45), [160, 190, 235], 0.4), 0.75)), shadow: mix(cloud.shadow, rgb, 0.6) };
     case 'brown':
@@ -537,12 +537,7 @@ function friend(S, prev, tint, preferSide, look) {
 
 // ——— colors ———
 
-// Bright paint is toned down to suit the light: at night everything sits in shadow.
-function dim(S, col) {
-  const k = S.scheme.night ? 0.55 : S.scheme.id === 'violet-dusk' ? 0.3 : 0;
-  return k ? mix(col, S.scheme.tree.dark, k) : col;
-}
-
+// A paint's leaf or ground colors, toned down to suit the light (dim, in color.js).
 const pal = (S, list) => list.map((h) => dim(S, hex(h)));
 
 // Flowers in the paint's own color, lifted a little when the paint is too dark to show.

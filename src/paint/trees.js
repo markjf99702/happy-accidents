@@ -1,6 +1,6 @@
 // Fan-brush evergreens, leafy trees, bushes and little patches of flowers.
 import { TAU, rand, randi, chance, clamp } from '../util.js';
-import { rgba, mix, jitter, darken, lum } from '../color.js';
+import { rgba, mix, jitter, darken, lum, dim } from '../color.js';
 import { bristle, linePts, grass } from '../brush.js';
 import { place, clumps, sideProfile } from '../shape.js';
 
@@ -343,7 +343,8 @@ export function flowers(S, p) {
   const { scheme, hy, H } = S;
   const dT = clamp((p.y - hy) / (H - hy), 0, 1);
   const r = clamp(p.R * 1.8, 8, 44) * (0.4 + dT);
-  const bloom = lum(p.tint) > 0.2 ? p.tint : scheme.leaf[3];
+  const bloom = lum(p.tint) > 0.2 ? dim(S, p.tint) : scheme.leaf[3];
+  const shine = rgba(dim(S, [255, 255, 255]), 0.35);
   const gc = groundColors(S, 0);
   // One clump where the splat landed, and a little one wherever a droplet did.
   const spots = [{ x: p.x, y: p.y, r }];
@@ -364,7 +365,7 @@ export function flowers(S, p) {
           ctx.beginPath();
           ctx.arc(fx, fy, s, 0, TAU);
           ctx.fill();
-          ctx.fillStyle = 'rgba(255,255,255,0.35)';
+          ctx.fillStyle = shine;
           ctx.beginPath();
           ctx.arc(fx - s * 0.3, fy - s * 0.3, s * 0.4, 0, TAU);
           ctx.fill();
