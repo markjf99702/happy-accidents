@@ -619,6 +619,19 @@ await page.click('#galleryBtn');
 await page.click('#closeGallery');
 await page.waitForFunction(() => history.state === null, null, { timeout: 5000 });
 
+// Inside another page's frame (the claude.ai viewer), overlays leave the history alone: going back from in there would
+// move the whole page back.
+const host = await browser.newPage({ viewport: { width: 420, height: 900 } });
+await host.setContent(`<iframe src="${base}" style="width:390px;height:844px;border:0"></iframe>`);
+const framed = host.frames()[1];
+await framed.waitForFunction(() => window.happyAccidents?.skipIntro);
+await framed.evaluate(() => window.happyAccidents.skipIntro());
+const pagesBack = await host.evaluate(() => history.length);
+await framed.click('#galleryBtn');
+assert.equal(await framed.isHidden('#gallery'), false, 'the gallery opens in a frame');
+assert.equal(await host.evaluate(() => history.length), pagesBack, 'opening the gallery in a frame added a step to the page’s history');
+await host.close();
+
 // With the name remembered, S starts in the title field, still without an "s" added to the title.
 await watchTyping();
 await page.keyboard.press('s');

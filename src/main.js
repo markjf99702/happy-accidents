@@ -379,11 +379,12 @@ const openOverlayEl = () => overlays.find((o) => !o.hidden);
 // The phone's Back button closes the overlay on top instead of leaving the page. Opening one adds a step to the history
 // (one taking over from another keeps it), and closing it with a button, Escape or a tap outside takes the step off
 // again. Going back is asynchronous, so until that lands, an overlay opened meanwhile waits for its own step.
+// Not inside another page's frame (the claude.ai viewer): going back from there moves that whole page back.
 const STEP = 'happy-accidents:overlay';
 const onStep = () => history.state?.[STEP] === true;
 let steppingOff = false;
 function stepOn() {
-  if (steppingOff || onStep()) return;
+  if (inFrame || steppingOff || onStep()) return;
   try {
     history.pushState({ [STEP]: true }, '');
   } catch {
