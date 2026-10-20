@@ -359,12 +359,14 @@ function openOverlay(el, focusEl) {
   returnFocus ??= document.activeElement;
   for (const o of overlays) o.hidden = o !== el;
   app.inert = true;
+  stepOn();
   (focusEl || el.querySelector('button, input'))?.focus();
 }
 function closeOverlay(el, focusEl = returnFocus) {
   el.hidden = true;
   app.inert = false;
   returnFocus = null;
+  stepOff();
   focusEl?.focus?.();
 }
 for (const o of overlays) {
@@ -373,6 +375,35 @@ for (const o of overlays) {
   });
 }
 const openOverlayEl = () => overlays.find((o) => !o.hidden);
+
+// The phone's Back button closes the overlay on top instead of leaving the page. Opening one adds a step to the history
+// (one taking over from another keeps it), and closing it with a button, Escape or a tap outside takes the step off
+// again. Going back is asynchronous, so until that lands, an overlay opened meanwhile waits for its own step.
+const STEP = 'happy-accidents:overlay';
+const onStep = () => history.state?.[STEP] === true;
+let steppingOff = false;
+function stepOn() {
+  if (steppingOff || onStep()) return;
+  try {
+    history.pushState({ [STEP]: true }, '');
+  } catch {
+    /* a frame that can't keep history: Back just leaves */
+  }
+}
+function stepOff() {
+  if (steppingOff || !onStep()) return;
+  steppingOff = true;
+  history.back();
+}
+window.addEventListener('popstate', () => {
+  if (steppingOff) {
+    steppingOff = false;
+    if (openOverlayEl()) stepOn();
+    return;
+  }
+  const open = openOverlayEl();
+  if (open) closeOverlay(open);
+});
 
 // ——— signing ———
 
@@ -429,7 +460,10 @@ $('signForm').addEventListener('submit', async (e) => {
     showPlacard(record, full);
   } finally {
     signing = false;
-    if (!openOverlayEl()) returnFocus = null;
+    if (!openOverlayEl()) {
+      returnFocus = null;
+      stepOff();
+    }
   }
 });
 

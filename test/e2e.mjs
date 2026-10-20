@@ -529,6 +529,25 @@ await page.keyboard.press('Shift+G');
 assert.equal(await page.isHidden('#gallery'), false, 'Shift+G opens the gallery');
 await page.keyboard.press('Escape');
 
+// The phone's Back button closes the overlay on top instead of leaving the page: the gallery wall, a painting opened
+// from it, and the sign form. Closing one with its own button takes its step off the history again.
+const goBack = async (id) => {
+  await S(() => history.back());
+  await page.waitForFunction((id) => document.getElementById(id)?.hidden !== false, id);
+  assert.equal(await S(() => window.stillHere), true, `Back from #${id} left the page`);
+};
+await S(() => (window.stillHere = true));
+await page.keyboard.press('g');
+await goBack('gallery');
+await page.keyboard.press('g');
+await page.click('.wall-open');
+await goBack('placard');
+await page.keyboard.press('s');
+await goBack('signSheet');
+await page.click('#galleryBtn');
+await page.click('#closeGallery');
+await page.waitForFunction(() => history.state === null, null, { timeout: 5000 });
+
 // With the name remembered, S starts in the title field, still without an "s" added to the title.
 await watchTyping();
 await page.keyboard.press('s');
