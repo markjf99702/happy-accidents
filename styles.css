@@ -179,7 +179,8 @@ kbd {
   flex-direction: column;
   gap: 12px;
   min-height: 100%;
-  padding-inline: var(--gutter);
+  /* Clear of the notch and the rounded corners on a phone held sideways. */
+  padding-inline: max(var(--gutter), env(safe-area-inset-left, 0px)) max(var(--gutter), env(safe-area-inset-right, 0px));
   padding-block: 12px 20px;
 }
 
@@ -544,7 +545,7 @@ kbd {
     grid-template-rows: auto minmax(0, 1fr);
     column-gap: 36px;
     row-gap: 8px;
-    padding-inline: 28px;
+    padding-inline: max(28px, env(safe-area-inset-left, 0px)) max(28px, env(safe-area-inset-right, 0px));
   }
 
   .top {
@@ -583,7 +584,7 @@ kbd {
 @media (orientation: landscape) and (max-height: 600px) {
   .app {
     padding-block: 8px;
-    padding-inline: var(--gutter);
+    padding-inline: max(var(--gutter), env(safe-area-inset-left, 0px)) max(var(--gutter), env(safe-area-inset-right, 0px));
     column-gap: 24px;
     row-gap: 0;
   }
@@ -659,7 +660,8 @@ kbd {
   display: flex;
   align-items: center;
   justify-content: center;
-  padding: max(16px, env(safe-area-inset-top, 0px)) 16px max(16px, env(safe-area-inset-bottom, 0px));
+  padding: max(16px, env(safe-area-inset-top, 0px)) max(16px, env(safe-area-inset-right, 0px)) max(16px, env(safe-area-inset-bottom, 0px))
+    max(16px, env(safe-area-inset-left, 0px));
   background: rgba(10, 8, 6, 0.78);
   backdrop-filter: blur(4px);
   overflow-y: auto;

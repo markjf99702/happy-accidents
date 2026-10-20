@@ -465,6 +465,30 @@ for (const [width, height] of [[844, 390], [667, 375]]) {
   });
   assert.deepEqual(sideways, { canvas: true, offScreen: [], beside: true, scrolls: false }, `held sideways at ${width} × ${height}`);
 }
+
+// With a notch at each side, as on an iPhone held sideways, nothing is drawn under it: not the page, not the gallery wall.
+await page.setViewportSize({ width: 844, height: 390 });
+const notched = await cdp.send('Emulation.setSafeAreaInsetsOverride', { insets: { top: 0, left: 47, right: 47, bottom: 21 } }).then(() => true, () => false);
+if (notched) {
+  await page.waitForTimeout(300);
+  const clear = () => S(() => {
+    const under = [];
+    for (const sel of ['.top', '#canvas', '.tray', '.wall']) {
+      const el = document.querySelector(sel);
+      const r = el.getBoundingClientRect();
+      if (el.closest('[hidden]')) continue;
+      if (r.left < 47 || r.right > innerWidth - 47) under.push(`${sel} ${Math.round(r.left)}..${Math.round(r.right)}`);
+    }
+    return under;
+  });
+  assert.deepEqual(await clear(), [], 'the page sits under the notch');
+  await page.keyboard.press('g');
+  assert.deepEqual(await clear(), [], 'the gallery wall sits under the notch');
+  await page.keyboard.press('Escape');
+  await cdp.send('Emulation.setSafeAreaInsetsOverride', { insets: { top: 0, left: 0, right: 0, bottom: 0 } });
+} else {
+  console.log('(this Chromium can’t pretend to have a notch, so that check was skipped)');
+}
 await page.setViewportSize({ width: 390, height: 844 });
 
 // On a phone the palette and buttons stay put while the painter talks: every line the painter says fits the two lines
