@@ -265,6 +265,7 @@ export function durationText(seconds) {
 }
 
 export function madeFrom(accidents, seconds) {
+  if (!accidents) return `Painted wet-on-wet without a single accident, in ${durationText(seconds)}.`;
   const a = accidents === 1 ? 'one happy accident' : `${accidents} happy accidents`;
   return `Painted wet-on-wet from ${a} in ${durationText(seconds)}.`;
 }

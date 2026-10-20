@@ -27,6 +27,7 @@ test('painting time and accident counts read naturally', () => {
   assert.equal(durationText(192), '3 min 12 s');
   assert.equal(madeFrom(1, 20), 'Painted wet-on-wet from one happy accident in 20 seconds.');
   assert.equal(madeFrom(14, 192), 'Painted wet-on-wet from 14 happy accidents in 3 min 12 s.');
+  assert.equal(madeFrom(0, 2), 'Painted wet-on-wet without a single accident, in 2 seconds.', 'a blank canvas isn’t made from 0 happy accidents');
 });
 
 test('titles are always real words', () => {
