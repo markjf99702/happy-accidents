@@ -432,11 +432,38 @@ for (const mood of ['golden-hour', 'misty-morning']) {
   assert.equal(cabin.top, 0, `the chimney smoke runs into the top edge of the cabin's layer (${mood})`);
 }
 
-// Fits a phone: nothing scrolls sideways. Nor on a tablet, or a phone on its side, in the same stacked layout.
+// Fits a phone: nothing scrolls sideways. Nor on a tablet, in the same stacked layout.
 assert.equal(await S(() => document.documentElement.scrollWidth <= innerWidth), true, 'the page scrolls sideways on a phone');
 for (const width of [600, 768, 959]) {
   await page.setViewportSize({ width, height: 1000 });
   assert.equal(await S(() => document.documentElement.scrollWidth <= innerWidth), true, `the page scrolls sideways at ${width} px wide`);
+}
+
+// A phone held sideways gets the side-by-side layout, packed to fit one screen: the whole canvas on the left, the
+// palette and all four buttons beside it. The page itself doesn't scroll, so nothing needs a swipe on the canvas, which
+// would paint. (Checked with the longest brush line, which takes three lines there.)
+for (const [width, height] of [[844, 390], [667, 375]]) {
+  await page.setViewportSize({ width, height });
+  await page.waitForTimeout(300);
+  const sideways = await S(() => {
+    const lineEl = document.getElementById('line');
+    const toolEl = document.getElementById('tool');
+    const was = [lineEl.textContent, toolEl.textContent];
+    lineEl.textContent = 'Your turn. Tap, flick, or press and hold. Try hitting what’s already there, too.';
+    toolEl.textContent = 'Round brush · Sap Green, Yellow Ochre, Van Dyke Brown · a touch of Alizarin Crimson';
+    const at = (id) => document.getElementById(id).getBoundingClientRect();
+    const inside = (r) => r.left >= 0 && r.top >= 0 && r.right <= innerWidth && r.bottom <= innerHeight;
+    const canvas = at('canvas');
+    const seen = {
+      canvas: inside(canvas),
+      offScreen: ['line', 'palette', 'oopsBtn', 'autoBtn', 'newBtn', 'signBtn'].filter((id) => !inside(at(id))),
+      beside: at('palette').left >= canvas.right,
+      scrolls: document.documentElement.scrollHeight > innerHeight || document.documentElement.scrollWidth > innerWidth,
+    };
+    [lineEl.textContent, toolEl.textContent] = was;
+    return seen;
+  });
+  assert.deepEqual(sideways, { canvas: true, offScreen: [], beside: true, scrolls: false }, `held sideways at ${width} × ${height}`);
 }
 await page.setViewportSize({ width: 390, height: 844 });
 

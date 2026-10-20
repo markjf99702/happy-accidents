@@ -534,8 +534,8 @@ kbd {
   outline-offset: 2px;
 }
 
-/* Wide screens: canvas on the left, the painter's tray on the right, all in one screen. */
-@media (min-width: 960px) {
+/* Wide screens, and a phone held sideways: canvas on the left, the painter's tray on the right, all in one screen. */
+@media (min-width: 960px), (orientation: landscape) and (max-height: 600px) {
   .app {
     display: grid;
     height: 100%;
@@ -574,6 +574,79 @@ kbd {
 
   .keys {
     display: flex;
+  }
+}
+
+/* A phone held sideways, or any short window: the same side by side, packed closer so the whole canvas, the palette
+   and the buttons fit in one screen. Whatever still doesn't fit (the footer, on the smallest phones) scrolls inside the
+   tray, so swiping on the canvas never has to scroll the page. */
+@media (orientation: landscape) and (max-height: 600px) {
+  .app {
+    padding-block: 8px;
+    padding-inline: var(--gutter);
+    column-gap: 24px;
+    row-gap: 0;
+  }
+
+  .top {
+    align-items: center;
+  }
+
+  .brand {
+    flex-direction: row;
+    align-items: baseline;
+    gap: 6px 14px;
+  }
+
+  .stage {
+    padding-block: 16px 6px;
+  }
+
+  .tray {
+    justify-content: flex-start;
+    gap: 10px;
+    padding-bottom: 0;
+    overflow-y: auto;
+  }
+
+  .tray > * {
+    flex-shrink: 0;
+  }
+
+  /* Centered when there's room, from the top when there isn't, so nothing is cut off above. */
+  .tray > :first-child {
+    margin-top: auto;
+  }
+
+  .tray > :last-child {
+    margin-bottom: auto;
+  }
+
+  .voice {
+    min-height: 0;
+  }
+
+  .line {
+    font-size: 17px;
+  }
+
+  .tool {
+    min-height: 2.9em;
+  }
+
+  .palette {
+    padding-block: 10px;
+  }
+
+  .actions button {
+    padding-block: 9px;
+  }
+}
+
+/* No keyboard to go with the key hints on a phone. */
+@media (orientation: landscape) and (max-height: 600px) and (pointer: coarse) {
+  .keys {
+    display: none;
   }
 }
 
