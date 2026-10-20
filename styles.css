@@ -387,6 +387,14 @@ kbd {
   min-height: 1.3em;
 }
 
+/* With the tray under the canvas, the brush line keeps room for two lines (its line height is 1.45), so the palette and
+   the buttons below don't hop up and down as the painter talks. */
+@media (max-width: 959px) {
+  .tool {
+    min-height: 2.9em;
+  }
+}
+
 .palette-block {
   display: flex;
   flex-direction: column;

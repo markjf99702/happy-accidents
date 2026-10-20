@@ -440,6 +440,26 @@ for (const width of [600, 768, 959]) {
 }
 await page.setViewportSize({ width: 390, height: 844 });
 
+// On a phone the palette and buttons stay put while the painter talks: every line the painter says fits the two lines
+// kept for it, and the brush line under it keeps room for two whether it says nothing, a little or a lot.
+const oopsAt = await S(async () => {
+  const { LINES } = await import('./src/words.js');
+  const lineEl = document.getElementById('line');
+  const toolEl = document.getElementById('tool');
+  const was = [lineEl.textContent, toolEl.textContent];
+  const ys = new Set();
+  for (const text of Object.values(LINES).flat()) {
+    for (const info of ['', '1-inch brush · Titanium White', 'Round brush · Sap Green, Yellow Ochre, Van Dyke Brown · a touch of Alizarin Crimson']) {
+      lineEl.textContent = text;
+      toolEl.textContent = info;
+      ys.add(Math.round(document.getElementById('oopsBtn').getBoundingClientRect().y));
+    }
+  }
+  [lineEl.textContent, toolEl.textContent] = was;
+  return [...ys];
+});
+assert.equal(oopsAt.length, 1, `the buttons moved as the painter talked, to ${oopsAt.join(', ')} px`);
+
 // The S key opens the sign form without typing an "s" into it.
 const watchTyping = () => S(() => {
   window.typed = [];
