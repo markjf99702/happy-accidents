@@ -9,8 +9,27 @@ import { topEdge, heights, at, span, sideProfile } from '../src/shape.js';
 import { ramp, mix, hex, mixPaint, familyOf, colorName } from '../src/color.js';
 import { weighted, pickFresh, clamp } from '../src/util.js';
 import { SCHEMES, PIGMENTS } from '../src/schemes.js';
+import { decide } from '../src/decide.js';
+import { makeSplat } from '../src/splat.js';
 
 const root = join(dirname(fileURLToPath(import.meta.url)), '..');
+
+// Just enough of a studio to ask decide() what a splat becomes: ground everywhere below the horizon, nothing painted yet.
+function bareStudio(schemeId = 'golden-hour') {
+  const reserved = new Set();
+  return {
+    W: 1200,
+    H: 900,
+    hy: 480,
+    lightDir: 1,
+    scheme: SCHEMES.find((s) => s.id === schemeId),
+    elementAt: () => null,
+    isLand: (x, y) => y > 480,
+    has: (kind) => reserved.has(kind),
+    count: () => 0,
+    reserve: (kind) => reserved.add(kind),
+  };
+}
 
 test('the placard lists what is in the painting in plain English', () => {
   assert.equal(featureLine({}), 'Mostly sky and water, which is plenty.');
@@ -57,6 +76,19 @@ test('the painter’s lines use curly apostrophes, like the rest of the page', (
   for (const [key, lines] of Object.entries(LINES)) {
     for (const text of lines) assert.doesNotMatch(text, /'/, `${key}: ${text}`);
   }
+});
+
+test('an ordinary brown tap on land can be a cabin', () => {
+  // Taps are R 11 to 22. From R 15 up, brown on land in the middle distance is a cabin about half the time (until there's
+  // one), which makes about a third of those taps a cabin; smaller ones are a bare tree or a bush.
+  const brown = PIGMENTS.find((p) => p.id === 'van-dyke-brown');
+  const becomes = (R) => {
+    const S = bareStudio();
+    return decide(S, makeSplat({ x: 600, y: S.hy + (S.H - S.hy) * 0.3, R, pigment: brown }))[0].kind;
+  };
+  const cabins = Array.from({ length: 60 }, (_, i) => becomes(15 + (i % 3))).filter((k) => k === 'cabin').length;
+  assert.ok(cabins >= 15, `only ${cabins} of 60 brown taps of R 15 to 17 made a cabin`);
+  for (let i = 0; i < 30; i++) assert.notEqual(becomes(14.5), 'cabin', 'a brown tap smaller than R 15 made a cabin');
 });
 
 test('a splat outline turns into a silhouette', () => {

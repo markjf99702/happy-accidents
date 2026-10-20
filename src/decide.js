@@ -408,7 +408,7 @@ function land(S, b, c, hint, vertical, dT) {
     return [step('flowers', () => P.flowers(S, { ...b, tint: bloomColor(c.rgb), onLand }))];
   }
 
-  const cabinFits = !S.has('cabin') && dT > 0.06 && dT < 0.62 && b.R >= 18 && b.elong < 1.6;
+  const cabinFits = !S.has('cabin') && dT > 0.06 && dT < 0.62 && b.R >= 15 && b.elong < 1.6;
   const cabinOdds = { brown: 0.55, red: 0.3, white: 0.12 }[c.fam] || 0;
   if (cabinFits && hint !== 'tree' && (hint === 'cabin' || (!hint && chance(cabinOdds)))) return cabinSteps(S, b, c);
 
