@@ -126,6 +126,46 @@ await page.click('[data-id="surprise"]');
 await page.waitForTimeout(2000);
 await settle();
 
+// One finger paints at a time: a finger that comes down while another is painting is ignored. Two fingers tapped
+// together make one splat, where the first one landed, and a second finger can't move a puddle the first is pouring.
+// And if the canvas loses hold of a finger without hearing it lift, the next touch still paints.
+const cdp = await ctx.newCDPSession(page);
+const finger = (u, v, id) => ({ x: b.x + b.width * u, y: b.y + b.height * v, id });
+const touch = (type, touchPoints = []) => cdp.send('Input.dispatchTouchEvent', { type, touchPoints });
+const splatsAt = () => S(() => window.happyAccidents.splats.map((s) => Math.round(s.x)));
+await S(() => window.happyAccidents.newCanvas('golden-hour'));
+await settle();
+b = await box();
+await touch('touchStart', [finger(0.25, 0.3, 0)]);
+await touch('touchStart', [finger(0.25, 0.3, 0), finger(0.75, 0.3, 1)]);
+await touch('touchEnd');
+await page.waitForTimeout(200);
+assert.deepEqual(await splatsAt(), [300], 'a two-finger tap made one splat, where the first finger landed');
+await S(() => window.happyAccidents.newCanvas('golden-hour'));
+await settle();
+await touch('touchStart', [finger(0.2, 0.8, 0)]);
+await page.waitForTimeout(600);
+await touch('touchStart', [finger(0.2, 0.8, 0), finger(0.8, 0.8, 1)]);
+await page.waitForTimeout(500);
+assert.equal(await S(() => Math.round(window.happyAccidents.pool?.x)), 240, 'a second finger moved the puddle the first was pouring');
+await touch('touchEnd');
+await page.waitForTimeout(200);
+assert.deepEqual(await splatsAt(), [240], 'the puddle landed somewhere other than where the first finger poured it');
+await settle();
+await S(() => document.getElementById('canvas').addEventListener('pointerdown', (e) => (window.downId = e.pointerId), { once: true }));
+await touch('touchStart', [finger(0.5, 0.3, 0)]);
+await touch('touchMove', [finger(0.51, 0.3, 0)]); // the canvas has hold of the finger from its first move
+await S(() => document.getElementById('canvas').releasePointerCapture(window.downId));
+await touch('touchMove', [{ x: b.x + b.width * 0.5, y: b.y - 30, id: 0 }]);
+await touch('touchEnd');
+before = await S(() => window.happyAccidents.accidents);
+await touch('touchStart', [finger(0.5, 0.3, 1)]);
+await touch('touchEnd');
+await page.waitForTimeout(200);
+assert.equal(await S(() => window.happyAccidents.accidents), before + 1, 'after the canvas lost hold of a finger, the next touch didn’t paint');
+assert.equal(await S(() => window.happyAccidents.pool), null, 'the lost finger left a puddle on the canvas');
+await settle();
+
 // Paint on something that's already there changes it: white on a mountain is fresh snow.
 await S(() => window.happyAccidents.newCanvas('golden-hour'));
 await settle();

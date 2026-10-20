@@ -195,6 +195,9 @@ function toCanvas(e) {
 }
 
 canvas.addEventListener('pointerdown', (e) => {
+  // One finger paints at a time: another finger that comes down meanwhile is ignored, so it can't take over the first
+  // one's paint or move its puddle.
+  if (gesture) return;
   if (e.pointerType === 'mouse' && e.button !== 0) return;
   e.preventDefault();
   canvas.setPointerCapture?.(e.pointerId);
@@ -259,6 +262,9 @@ function finishGesture(e, cancelled = false) {
 
 canvas.addEventListener('pointerup', (e) => finishGesture(e));
 canvas.addEventListener('pointercancel', (e) => finishGesture(e, true));
+// The canvas lets go of a pointer right after its pointerup. If it loses hold of one with no pointerup, the gesture ends
+// there, so it can't keep the next one from painting.
+canvas.addEventListener('lostpointercapture', (e) => finishGesture(e, true));
 canvas.addEventListener('contextmenu', (e) => e.preventDefault());
 
 // ——— actions ———
